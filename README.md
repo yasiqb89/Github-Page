@@ -7,9 +7,9 @@ Static pages for FocusApp App Store review links.
 After publishing this repository with GitHub Pages, use one of these formats for
 `SubscriptionManager.privacyURL`:
 
-- Project page: `https://<github-username>.github.io/<repo-name>/privacy/`
-- User or organization page: `https://<github-username>.github.io/privacy/`
-- Custom domain: `https://<your-domain>/privacy/`
+- Project page: `https://<github-username>.github.io/<repo-name>/focus/privacy-policy/`
+- User or organization page: `https://<github-username>.github.io/focus/privacy-policy/`
+- Custom domain: `https://<your-domain>/focus/privacy-policy/`
 
 If the app still uses `https://focusapp.example.com/privacy`, either update the
 app to the GitHub Pages URL or configure a real custom domain with DNS and a
@@ -24,5 +24,6 @@ matching `CNAME` file.
 5. Select branch `main` and folder `/ (root)`.
 6. Save and wait for GitHub Pages to publish.
 
-Before App Review, replace the contact line in `privacy/index.html` with a live
-support or privacy email address if the App Store support contact is not enough.
+Before App Review, replace the contact line in `focus/privacy-policy/index.html`
+with a live support or privacy email address if the GitHub repository issue link
+is not enough.
