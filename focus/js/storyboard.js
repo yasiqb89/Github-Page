@@ -416,8 +416,20 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
 
   // While Lenis is actively scrolling, halve the field's frame rate so it yields
   // the main thread to smooth scrolling (the ambient field isn't scrutinised mid-scroll).
-  let lastScrollAt = -1e9;
-  if (lenis && lenis.on) lenis.on('scroll', () => { lastScrollAt = performance.now(); });
+  // We also suppress pointer interaction on the icon row for the duration: when the
+  // page scrolls under a stationary cursor, icons sliding past would otherwise fire
+  // mouseenter → setActive (full particle + copy + exhibit morph), thrashing the
+  // main thread and stuttering the scroll. .af--scrolling disables pointer-events on
+  // the row (CSS), so no accidental hover; it's lifted ~150ms after scroll settles,
+  // and a deliberate mouse move onto an icon then activates it as normal.
+  let lastScrollAt = -1e9, scrollSettle = null;
+  if (lenis && lenis.on) lenis.on('scroll', () => {
+    lastScrollAt = performance.now();
+    if (!finePointer) return;             // touch: no hover to suppress, keep taps live
+    section.classList.add('af--scrolling');
+    clearTimeout(scrollSettle);
+    scrollSettle = setTimeout(() => section.classList.remove('af--scrolling'), 150);
+  });
 
   let running = false, raf = 0, fired = false, tick = 0, lastT = 0, emaDt = 16.7;
   function loop() {

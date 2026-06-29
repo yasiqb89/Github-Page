@@ -792,7 +792,7 @@ img, svg, canvas { display: block; }
 /* ─────────────────────────────────────
    SECTION 2 — BLOCKING
 ───────────────────────────────────── */
-.block { padding: 0; }
+.block { padding: 0; background: linear-gradient(180deg, #0a0e0c 0%, #0d1824 35%, #0d1824 100%); }
 .block__grid { padding-block: clamp(110px, 15vw, 200px); align-items: start; }
 .block__copy { grid-column: 1 / span 4; }
 .block__mockup-wrap { grid-column: 5 / -1; }
@@ -805,23 +805,41 @@ img, svg, canvas { display: block; }
 
 .safari-svg {
   width: 100%;
-  height: auto;
+  aspect-ratio: 1203 / 753;
   display: block;
-  filter:
-    drop-shadow(0 56px 96px rgba(0,0,0,.8))
-    drop-shadow(0 16px 32px rgba(0,0,0,.55));
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  /* The iframe runs a continuous animation. pointer-events:none lets the wheel
+     reach Lenis instead of being swallowed by the iframe (kills scroll jitter);
+     box-shadow (not filter:drop-shadow) avoids re-rasterising the shadow from the
+     animating content every frame. */
+  pointer-events: none;
+  box-shadow:
+    0 56px 96px rgba(0,0,0,.8),
+    0 16px 32px rgba(0,0,0,.55);
 }
 
-.iphone-svg {
+/* push the whole mockup column down so content sits lower in the section */
+.block__mockup-wrap {
+  margin-top: clamp(32px, 5vw, 72px);
+}
+
+/* iPhone photo overlay — full upright product shot standing in front of the Safari window's
+   bottom-right corner. Shown complete (no fade/blur); a soft drop-shadow lifts it off the page. */
+.iphone-photo {
   position: absolute;
-  width: 26%;
-  right: -4%;
-  bottom: -10%;
+  width: 29%;
+  left: -5%;
+  bottom: -7%;
+}
+.iphone-photo__img {
+  width: 100%;
   height: auto;
   display: block;
   filter:
-    drop-shadow(0 24px 48px rgba(0,0,0,.85))
-    drop-shadow(0 8px 16px rgba(0,0,0,.6));
+    drop-shadow(0 34px 58px rgba(0,0,0,.8))
+    drop-shadow(0 12px 24px rgba(0,0,0,.5));
 }
 
 /* responsive */
@@ -829,7 +847,7 @@ img, svg, canvas { display: block; }
   .block__grid { grid-template-columns: 1fr; }
   .block__copy, .block__mockup-wrap { grid-column: 1; }
   .mockup-combo  { max-width: 100%; }
-  .iphone-svg    { width: 22%; right: -2%; bottom: -6%; }
+  .iphone-photo  { width: 26%; left: -3%; bottom: -4%; }
 }
 
 /* ─────────────────────────────────────
@@ -848,7 +866,7 @@ img, svg, canvas { display: block; }
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background:
     radial-gradient(130% 90% at 50% 48%, transparent 52%, rgba(8,11,9,.55) 100%),
-    linear-gradient(180deg, #0a0e0c 0%, transparent 22%, transparent 78%, #0a0e0c 100%);
+    linear-gradient(180deg, #0a0e0c 0%, transparent 22%, transparent 58%, #0a0e0c 100%);
 }
 /* film grain — filmic texture over the field, below the copy. Kills gradient
    banding and adds a premium, tactile finish. */
@@ -907,6 +925,11 @@ img, svg, canvas { display: block; }
   gap: clamp(9px, 1.1vw, 15px); flex-wrap: wrap;
   width: 100%; max-width: 640px; margin: 0 auto;
 }
+/* While Lenis is mid-scroll, the icon row ignores the pointer so the page moving
+   under a stationary cursor can't fire accidental hover activations (which trigger
+   a full particle/copy/exhibit morph and stutter the scroll). Lifted ~150ms after
+   scroll settles by storyboard.js. */
+.af--scrolling .af__row { pointer-events: none; }
 .af__icon {
   position: relative; overflow: visible;
   width: clamp(50px, 5vw, 64px); aspect-ratio: 1;
@@ -1382,6 +1405,17 @@ img, svg, canvas { display: block; }
    SECTION 4 — JOURNEY
 ───────────────────────────────────── */
 /* ── Journey — horizontal card strip ───────────────────── */
+/* "One Identity" shares the Habits section's deep, premium tone instead of the
+   old lighter #13212f wash that flattened the cards. A soft blue lift settles
+   into deep ink (#0a0e0c, the Habits body colour) so the identity cards and copy
+   feel alive against the dark, with a gentle central glow behind the strip. Entry
+   stays seamless from Modes (both #0a0e0c at the seam); the alternating light/dark
+   cadence is intentionally broken through this run. */
+#journey {
+  background:
+    radial-gradient(115% 78% at 50% 42%, rgba(30, 54, 80, .30), rgba(10, 14, 12, 0) 62%),
+    linear-gradient(180deg, #0a0e0c 0%, #0c131b 48%, #0a0e0c 100%);
+}
 .journey { padding: 0; }
 
 /* GSAP pins this element — do NOT add position:sticky here */
