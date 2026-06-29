@@ -815,21 +815,33 @@ img, svg, canvas { display: block; }
 .block__mockup { display: flex; justify-content: flex-start; align-items: flex-start; }
 .mockup-combo { position: relative; display: inline-block; width: 100%; max-width: 780px; }
 
-.safari-svg {
+/* The bundled mockup renders a dark "desktop" margin above/below the browser
+   window. .safari-crop clips those empty dark strips so the window (Safari chrome
+   + page) sits flush in the framed mockup — no black padding band. overflow lives
+   here, not on .mockup-combo, so the iPhone overlay can still overhang. */
+.safari-crop {
+  position: relative;
   width: 100%;
-  aspect-ratio: 1203 / 753;
-  display: block;
-  border: 0;
+  aspect-ratio: 1203 / 677;   /* the window region; ~25px desktop margins removed */
   border-radius: 12px;
-  background: transparent;
-  /* The iframe runs a continuous animation. pointer-events:none lets the wheel
-     reach Lenis instead of being swallowed by the iframe (kills scroll jitter);
-     box-shadow (not filter:drop-shadow) avoids re-rasterising the shadow from the
-     animating content every frame. */
-  pointer-events: none;
+  overflow: hidden;
+  /* box-shadow (not filter:drop-shadow) avoids re-rasterising the shadow from the
+     iframe's animating content every frame. */
   box-shadow:
     0 56px 96px rgba(0,0,0,.8),
     0 16px 32px rgba(0,0,0,.55);
+}
+.safari-svg {
+  position: absolute;
+  top: -5.7%;        /* pull the dark desktop strip above the clip */
+  left: 0;
+  width: 100%;
+  height: 111.2%;    /* enlarge so the window fills + bottom strip clips off */
+  display: block;
+  border: 0;
+  background: transparent;
+  /* pointer-events:none lets the wheel reach Lenis instead of the iframe. */
+  pointer-events: none;
 }
 
 /* push the whole mockup column down so content sits lower in the section */
