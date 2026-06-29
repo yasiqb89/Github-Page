@@ -434,12 +434,33 @@ function setupModesMosaic() {
 function setupTilt() {
   if (reduced || !matchMedia('(hover: hover)').matches) return;
   document.querySelectorAll('.getcard[data-tilt]').forEach((el) => {
+    // Lerp toward the cursor-derived target on a single rAF instead of writing
+    // the transform straight from the pointer — gives the tilt momentum (no
+    // artificial snap) and batches the write off the event. transform-only, so
+    // the card never reflows and returns to its exact resting box on leave.
+    let tRX = 0, tRY = 0, tTY = 0, rRX = 0, rRY = 0, rTY = 0;
+    let raf = null, inside = false;
+    const LERP = 0.14;
+    const loop = () => {
+      rRX += (tRX - rRX) * LERP;
+      rRY += (tRY - rRY) * LERP;
+      rTY += (tTY - rTY) * LERP;
+      const settled = Math.abs(tRX - rRX) < 0.03 && Math.abs(tRY - rRY) < 0.03 && Math.abs(tTY - rTY) < 0.05;
+      if (settled && !inside) { el.style.transform = ''; raf = null; return; }
+      el.style.transform = `perspective(700px) rotateY(${rRY.toFixed(2)}deg) rotateX(${rRX.toFixed(2)}deg) translateY(${rTY.toFixed(2)}px)`;
+      raf = requestAnimationFrame(loop);
+    };
     el.addEventListener('mousemove', (e) => {
       const r = el.getBoundingClientRect();
       const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-      el.style.transform = `perspective(700px) rotateY(${(px - .5) * 12}deg) rotateX(${(.5 - py) * 12}deg) translateY(-4px)`;
+      tRY = (px - .5) * 12; tRX = (.5 - py) * 12; tTY = -4;
+      inside = true;
+      if (!raf) raf = requestAnimationFrame(loop);
     });
-    el.addEventListener('mouseleave', () => { el.style.transform = ''; });
+    el.addEventListener('mouseleave', () => {
+      inside = false; tRX = 0; tRY = 0; tTY = 0;
+      if (!raf) raf = requestAnimationFrame(loop);
+    });
   });
 }
 

@@ -258,21 +258,33 @@ img, svg, canvas { display: block; }
 }
 .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; border-radius: 50px; font-size: 14px; font-weight: 700; letter-spacing: .04em; transition: transform .2s var(--ease), box-shadow .2s; cursor: pointer; }
 .btn--lime { background: var(--lime); color: #0b0f07; }
-.btn--lime:hover { box-shadow: 0 0 32px rgba(191,255,71,.45); transform: scale(1.02); }
+.btn--lime:hover { box-shadow: 0 0 32px rgba(191,255,71,.45); }
 .btn--ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line); }
 .btn--ghost:hover { color: var(--ink); border-color: rgba(255,255,255,.2); }
 .btn--xl { padding: 18px 44px; font-size: 16px; }
+/* Hover lift is pointer-only so it never sticks after a tap on touch; press
+   scales down on every device for tactile feedback. Both transform-only → the
+   button scales about its own centre, no layout reflow. */
+@media (hover: hover) and (pointer: fine) {
+  .btn--lime:hover { transform: scale(1.02); }
+}
+.btn:active { transform: scale(0.97); }
 
 /* App-store style download buttons — brand glyph + two-line label, matched pair */
 .store-btn {
   display: inline-flex; align-items: center; gap: 12px;
   min-width: 192px; padding: 11px 22px 11px 18px; border-radius: 14px;
   text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: transform .32s var(--ease), background .32s var(--ease),
+  transition: transform .16s var(--ease), background .32s var(--ease),
               border-color .32s var(--ease), box-shadow .32s var(--ease);
   will-change: transform;
 }
-.store-btn:hover { transform: translateY(-2px); }
+/* Hover lift is pointer-only (no sticky-hover after tap); press scales down for
+   tactile feedback. transform-only → no reflow, resting position unchanged. */
+@media (hover: hover) and (pointer: fine) {
+  .store-btn:hover { transform: translateY(-2px); }
+}
+.store-btn:active { transform: scale(0.97); }
 .store-btn__glyph { width: 25px; height: 25px; flex: none; }
 .store-btn__text { display: flex; flex-direction: column; line-height: 1; }
 .store-btn__sm { font-size: 11px; font-weight: 500; letter-spacing: .03em; opacity: .68; margin-bottom: 3px; }
@@ -912,6 +924,11 @@ img, svg, canvas { display: block; }
 @keyframes af-shimmer {
   0%   { background-position: 120% 0; }
   100% { background-position: -20% 0; }
+}
+/* Honour reduced-motion: stop the perpetual sheen. The gradient fill stays, so
+   the word is still lime — it just no longer loops. */
+@media (prefers-reduced-motion: reduce) {
+  .af__title .lime { animation: none; }
 }
 .af__line {
   font-size: clamp(18px, 2.1vw, 27px); color: rgba(255,255,255,.82);
