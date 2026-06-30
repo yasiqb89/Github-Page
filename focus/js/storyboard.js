@@ -17,7 +17,7 @@ const fcos = (a) => SIN[(((a * TRIG_K) | 0) + (TRIG_N >> 2)) & (TRIG_N - 1)];
 // Default (rest) state — shown when nothing is hovered
 const DEFAULT = {
   title: 'Everything you need to take your <span class="lime">attention</span> back.',
-  line:  'Turn focus into a lasting habit with simple schedules, guided sessions, and smarter app limits designed to keep your day on track, without friction.',
+  line:  'Hover any tool to see how it keeps you focused.',
   col:   [191, 255, 71],   // brand lime — the rest ring + wash
 };
 
