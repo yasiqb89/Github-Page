@@ -1,4 +1,4 @@
-// Identity card strip — scroll-bound reveal (first 10) + auto-reveal rest
+// Identity card strip — pinned horizontal scrub + premium draggable scrubber
 import { renderSigil } from './sigil.js';
 
 // Per-stage palettes: edge color + 3-stop body gradient
@@ -257,7 +257,7 @@ function attachHover(card, tilt, face, glare, shimmer, reduced) {
 }
 
 // ── Main export ───────────────────────────────────────────
-export function initJourney(root, stages, gsap, ScrollTrigger) {
+export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
   if (!root) return null;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -270,7 +270,6 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
   wrap.appendChild(strip);
 
   const cardEls = [];
-
   stages.forEach((stage) => {
     const item = document.createElement('div');
     item.className = 'journey__strip-item';
@@ -282,178 +281,118 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
 
   root.appendChild(wrap);
 
-  // ── 2. Scroll progress rail ──────────────────────────────
-  // Premium horizontal-scroll affordance (replaces the old "drag to explore"
-  // pill + arrows). A slim track with a lime thumb: the thumb's width is the
-  // fraction of the strip on screen and its position is how far you've travelled,
-  // so it reads as a refined scrollbar that says "these cards move sideways"
-  // without any pill or arrows. Driven by updateRail() below.
-  const rail = document.createElement('div');
-  rail.className = 'journey__rail';
-  rail.setAttribute('aria-hidden', 'true');
-
-  const railThumb = document.createElement('span');
-  railThumb.className = 'journey__rail-thumb';
-  rail.appendChild(railThumb);
-
   const pin  = root.closest('.journey__pin') ?? root.parentElement;
   const foot = pin?.querySelector('.journey__foot');
-  pin?.appendChild(rail);
 
-  // ── 3. Layout + animation (after first paint) ────────────
+  // ── 2. Premium scrubber — progress readout + draggable handle ──
+  // Replaces the old passive rail. The whole strip pans on vertical scroll
+  // (pinned scrub); this bar reflects that progress AND lets you grab the handle
+  // to scrub directly. The handle seeks the *page scroll* (not the strip
+  // transform), so ScrollTrigger stays the single source of truth and nothing
+  // fights over the strip's x.
+  const scrubber = document.createElement('div');
+  scrubber.className = 'journey__scrubber';
+  scrubber.innerHTML =
+    '<div class="journey__scrub-meta">' +
+      '<span class="journey__scrub-count">01 / ' + stages.length + '</span>' +
+      '<span class="journey__scrub-name">' + stages[0].name + '</span>' +
+    '</div>' +
+    '<div class="journey__scrub-track" role="slider" tabindex="0" ' +
+         'aria-label="Identity journey progress" aria-valuemin="1" ' +
+         'aria-valuemax="' + stages.length + '" aria-valuenow="1">' +
+      '<span class="journey__scrub-fill"></span>' +
+      '<span class="journey__scrub-handle"></span>' +
+    '</div>';
+  if (foot) pin.insertBefore(scrubber, foot); else pin?.appendChild(scrubber);
+
+  const track   = scrubber.querySelector('.journey__scrub-track');
+  const countEl = scrubber.querySelector('.journey__scrub-count');
+  const nameEl  = scrubber.querySelector('.journey__scrub-name');
+
+  // Paint the bar + readout for a 0–1 progress value.
+  const setScrub = (p) => {
+    p = p < 0 ? 0 : p > 1 ? 1 : p;
+    scrubber.style.setProperty('--p', p.toFixed(4));
+    const idx = Math.round(p * (stages.length - 1));
+    countEl.textContent = String(idx + 1).padStart(2, '0') + ' / ' + stages.length;
+    nameEl.textContent  = stages[idx].name;
+    track.setAttribute('aria-valuenow', String(idx + 1));
+  };
+  setScrub(0);
+
+  // Wire pointer-drag + keyboard onto the track. seek(p) decides what a 0–1
+  // position *does* (drive page scroll, or scrollLeft in the reduced fallback).
+  // Returns a getter so callers can tell when the user is actively scrubbing —
+  // used to stop the scroll-driven update from fighting the drag.
+  const bindScrub = (seek) => {
+    let active = false;
+    const pAt = (x) => {
+      const r = track.getBoundingClientRect();
+      return r.width ? Math.max(0, Math.min(1, (x - r.left) / r.width)) : 0;
+    };
+    const move = (e) => { if (!active) return; const p = pAt(e.clientX); setScrub(p); seek(p); };
+    track.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      active = true;
+      track.classList.add('is-grabbing');
+      try { track.setPointerCapture(e.pointerId); } catch (_) {}
+      move(e);
+    });
+    track.addEventListener('pointermove', move);
+    const up = (e) => {
+      if (!active) return;
+      active = false;
+      track.classList.remove('is-grabbing');
+      try { track.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    track.addEventListener('pointerup', up);
+    track.addEventListener('pointercancel', up);
+    track.addEventListener('keydown', (e) => {
+      const step = 1 / (stages.length - 1);
+      let p = parseFloat(scrubber.style.getPropertyValue('--p')) || 0;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') p += step;
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') p -= step;
+      else if (e.key === 'Home') p = 0;
+      else if (e.key === 'End') p = 1;
+      else return;
+      e.preventDefault();
+      p = Math.max(0, Math.min(1, p));
+      setScrub(p); seek(p);
+    });
+    return () => active;
+  };
+
+  // ── 3. Layout + behaviour (after first paint) ──────────────
   requestAnimationFrame(() => {
-    // How many cards scroll drives; rest auto-reveal on pin release
-    const BOUND_COUNT = 10;
-    // Scroll distance for the pin (× viewport height)
-    const PIN_MULT    = 1.2;
-
-    // ── Scale cards to fit vertical space ───────────────
     const header  = pin?.querySelector('.journey__header-grid');
     const headerH = header ? header.getBoundingClientRect().height : 200;
 
-    let stripScale = Math.min(0.75, Math.max(0.34,
-      (window.innerHeight - headerH - 48) * 0.66 / 321));
+    // Scale cards so the strip + header + scrubber fit one viewport height.
+    const computeScale = () => {
+      const avail = window.innerHeight - headerH - (scrubber.offsetHeight || 64) - 40;
+      return Math.min(0.78, Math.max(0.34, avail * 0.7 / 321));
+    };
+    let stripScale = computeScale();
     strip.style.setProperty('--strip-scale', stripScale.toFixed(4));
 
     cardEls.forEach(({ card, tilt, face, glare, shimmer }) =>
       attachHover(card, tilt, face, glare, shimmer, reduced));
 
-
-    // ── Compute how far to slide during scrub ────────────
-    // Just enough to bring the BOUND_COUNT-th card fully on screen.
-    // Uses offsetLeft (relative to strip — strip has position:relative in CSS).
-    let boundSlideX = 0;
-    const computeBoundSlide = () => {
-      if (cardEls.length < BOUND_COUNT) { boundSlideX = 0; return; }
-      const sc        = parseFloat(strip.style.getPropertyValue('--strip-scale')) || stripScale;
-      const cardW     = Math.round(260 * sc);
-      const lastItem  = cardEls[BOUND_COUNT - 1].item;
-      const lastRight = lastItem.offsetLeft + cardW;
-      boundSlideX = -Math.max(0, lastRight - wrap.clientWidth + 40);
-    };
-    computeBoundSlide();
-
-    // ── Full-strip max drag extent ───────────────────────
+    // Full horizontal travel: from x=0 to the last card aligned at the right edge.
     let maxX = 0;
-    const computeMax = () => {
-      maxX = -Math.max(0, strip.scrollWidth - wrap.clientWidth);
-    };
+    const computeMax = () => { maxX = -Math.max(0, strip.scrollWidth - wrap.clientWidth); };
     computeMax();
-
-    // ── Drag + inertia state ────────────────────────────
-    let dragX = 0, vel = 0, startX = 0, lastMX = 0;
-    let dragging = false, draf = null;
-    let dragEnabled = !!reduced; // only true immediately for reduced-motion
-
-    const applyX = (x) => {
-      dragX = Math.max(maxX, Math.min(0, x));
-      strip.style.transform = `translateX(${dragX}px)`;
-      updateRail();
-    };
-
-    const coast = () => {
-      cancelAnimationFrame(draf);
-      const tick = () => {
-        vel   *= 0.93;
-        dragX  = Math.max(maxX, Math.min(0, dragX + vel));
-        strip.style.transform = `translateX(${dragX}px)`;
-        updateRail();
-        rectsDirty = true; // cards coasting — glow centers stale
-        if (dragX <= maxX || dragX >= 0) vel = 0;
-        draf = Math.abs(vel) > 0.2 ? requestAnimationFrame(tick) : null;
-      };
-      draf = requestAnimationFrame(tick);
-    };
-
-    // ── Rail lifecycle ───────────────────────────────────
-    // Map the strip's current x onto the thumb: width = the visible fraction of
-    // the strip, left = how far through the travel you are (0 at the first card,
-    // 1 at the last). Called on every drag/inertia frame and on resize.
-    let railVisible = false;
-    const updateRail = () => {
-      if (maxX >= 0) { railThumb.style.left = '0%'; railThumb.style.width = '100%'; return; }
-      const cur     = parseFloat(gsap.getProperty(strip, 'x')) || 0;
-      const p       = Math.max(0, Math.min(1, cur / maxX));            // 0 at start → 1 at end
-      const visible = Math.max(0.14, Math.min(1, wrap.clientWidth / strip.scrollWidth));
-      railThumb.style.width = (visible * 100).toFixed(2) + '%';
-      railThumb.style.left  = (p * (1 - visible) * 100).toFixed(2) + '%';
-    };
-
-    const showRail = () => {
-      updateRail();
-      if (railVisible || reduced) return;
-      railVisible = true;
-      gsap.to(rail, { opacity: 1, duration: 0.55, ease: 'power2.out', delay: 0.25 });
-    };
-
-    const hideRail = () => {
-      if (!railVisible) return;
-      railVisible = false;
-      gsap.to(rail, { opacity: 0, duration: 0.3, ease: 'power1.in' });
-    };
-
-    // ── Pointer / wheel events ───────────────────────────
-    wrap.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || !dragEnabled) return;
-      dragging = true;
-      startX   = e.clientX - dragX;
-      lastMX   = e.clientX;
-      vel = 0;
-      cancelAnimationFrame(draf);
-      strip.style.transition    = 'none';
-      strip.style.pointerEvents = 'none';
-      wrap.classList.add('is-dragging');
-      wrap.setPointerCapture(e.pointerId);
-    });
-
-    wrap.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
-      vel    = e.clientX - lastMX;
-      lastMX = e.clientX;
-      applyX(e.clientX - startX);
-      rectsDirty = true; // cards moved — glow centers stale
-    });
-
-    const endDrag = () => {
-      if (!dragging) return;
-      dragging = false;
-      wrap.classList.remove('is-dragging');
-      strip.style.pointerEvents = '';
-      coast();
-    };
-    wrap.addEventListener('pointerup',     endDrag);
-    wrap.addEventListener('pointercancel', endDrag);
-
-    // Trackpad / horizontal wheel — only after pin releases
-    wrap.addEventListener('wheel', (e) => {
-      if (!dragEnabled) return;
-      const dx = Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : 0;
-      if (Math.abs(dx) < 1) return;
-      e.preventDefault();
-      cancelAnimationFrame(draf);
-      vel = -dx * 0.5;
-      applyX(dragX - dx);
-      coast();
-      rectsDirty = true; // cards moved — glow centers stale
-    }, { passive: false });
 
     // ── Proximity border glow ────────────────────────────────
     // Conic-gradient arc on each card border sweeps toward the cursor.
-    //
-    // Performance rules (the earlier version was janky because it broke these):
     //  • pointermove does ZERO layout reads — it uses cached card centers.
-    //  • Card centers recompute only when cards actually move
-    //    (scroll / drag / resize), flagged via rectsDirty.
-    //  • Only ACTIVE cards (cursor within proximity) get per-frame writes;
-    //    the other ~20 cards are untouched.
-    const GLOW_PROXIMITY = 220; // px — activation radius from card center
+    //  • Centers recompute only when cards move (scroll / drag / resize).
+    //  • Only ACTIVE cards (cursor within proximity) get per-frame writes.
+    const GLOW_PROXIMITY = 220;
     const GLOW_PROX_SQ   = GLOW_PROXIMITY * GLOW_PROXIMITY;
-    const GLOW_LERP      = 0.14; // angle smoothing — lower = more lag
-
+    const GLOW_LERP      = 0.14;
     const glowStates = cardEls.map(() => ({ angle: 0, target: 0, active: false }));
-    let glowRaf    = null;
-    let centers    = [];     // cached { cx, cy } per card
-    let rectsDirty = true;
+    let glowRaf = null, centers = [], rectsDirty = true;
 
     const recomputeCenters = () => {
       centers = cardEls.map(({ card }) => {
@@ -462,8 +401,6 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
       });
       rectsDirty = false;
     };
-
-    // Animate only active cards toward their target angle
     const glowTick = () => {
       let running = false;
       for (let i = 0; i < cardEls.length; i++) {
@@ -480,12 +417,10 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
       }
       glowRaf = running ? requestAnimationFrame(glowTick) : null;
     };
-
     let pmx = -9999, pmy = -9999, movePending = false;
-
     const processGlow = () => {
       movePending = false;
-      if (rectsDirty) recomputeCenters(); // at most one layout pass per settle
+      if (rectsDirty) recomputeCenters();
       let needTick = false;
       for (let i = 0; i < cardEls.length; i++) {
         const s = glowStates[i];
@@ -497,136 +432,104 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
           s.active = near;
           cardEls[i].card.style.setProperty('--glow-active', near ? '1' : '0');
         }
-        if (near) {
-          // atan2 + 90° so 0deg points at the top of the card (12 o'clock)
-          s.target = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-          needTick = true;
-        }
+        if (near) { s.target = Math.atan2(dy, dx) * 180 / Math.PI + 90; needTick = true; }
       }
       if (needTick && !glowRaf) glowRaf = requestAnimationFrame(glowTick);
     };
-
-    // Only run the glow while the journey section is on screen — no point
-    // looping 22 cards on pointermove while the user is up in the hero.
     let glowEnabled = false;
     if (!reduced && pin) {
       new IntersectionObserver((entries) => {
         glowEnabled = entries[0].isIntersecting;
-        if (glowEnabled) rectsDirty = true; // positions changed while off-screen
+        if (glowEnabled) rectsDirty = true;
       }, { rootMargin: '100px' }).observe(pin);
-
       document.addEventListener('pointermove', (e) => {
         if (!glowEnabled) return;
         pmx = e.clientX; pmy = e.clientY;
         if (!movePending) { movePending = true; requestAnimationFrame(processGlow); }
       }, { passive: true });
-      // Cached centers go stale whenever the cards shift on screen
       window.addEventListener('scroll', () => { if (glowEnabled) rectsDirty = true; }, { passive: true });
     }
 
-    // ── Reduced-motion path ──────────────────────────────
-    if (reduced) {
-      cardEls.forEach(({ item }) => { item.style.opacity = '1'; item.style.transform = 'none'; });
+    // ── Reduced-motion / no-GSAP: native horizontal scroll + live bar ──
+    if (reduced || !ScrollTrigger) {
+      wrap.classList.add('is-native');
+      cardEls.forEach(({ item }) => { item.style.opacity = '1'; });
+      gsap.set(scrubber, { opacity: 1 });
       if (foot) foot.style.opacity = '1';
-      // Dragging is enabled immediately for reduced-motion, so show the rail
-      // statically (no fade) as the scroll affordance.
-      gsap.set(rail, { opacity: 1 });
-      updateRail();
+      const nativeMax = () => Math.max(0, wrap.scrollWidth - wrap.clientWidth);
+      const dragging = bindScrub((p) => { wrap.scrollLeft = p * nativeMax(); });
+      wrap.addEventListener('scroll', () => {
+        if (dragging()) return;
+        const m = nativeMax();
+        setScrub(m ? wrap.scrollLeft / m : 0);
+      }, { passive: true });
       return;
     }
 
-    // ── Animated path ────────────────────────────────────
-    const boundCards = cardEls.slice(0, BOUND_COUNT);
-    const freeCards  = cardEls.slice(BOUND_COUNT);
-
-    // All cards start hidden
-    gsap.set(cardEls.map(c => c.item), { opacity: 0, x: 64 });
+    // ── Animated path: pinned horizontal scrub ───────────────
+    // Cards fade/slide in over the first sliver of the scrub, then the whole
+    // strip pans across the rest of it — so a plain vertical scroll walks you
+    // through all 22 cards, and the pin releases at the end to continue the page.
+    gsap.set(cardEls.map(c => c.item), { opacity: 0, xPercent: 16 });
     if (foot) gsap.set(foot, { opacity: 0 });
 
-    const CARD_DUR    = 0.18;
-    const CARD_LAG    = 0.055;
-    const SLIDE_START = 4 * CARD_LAG; // slide begins as card 5 appears
-
     const tl = gsap.timeline();
+    tl.to(cardEls.map(c => c.item),
+      { opacity: 1, xPercent: 0, duration: 0.5, stagger: 0.012, ease: 'power2.out' }, 0);
+    tl.to(strip, { x: () => maxX, duration: 4.0, ease: 'none' }, 0.45);
 
-    // Footer fades with the very first card
-    if (foot) tl.to(foot, { opacity: 1, duration: 0.60, ease: 'power1.out' }, 0);
+    // Pin length tracks the pan distance so the speed feels consistent across
+    // viewport widths (re-evaluated on refresh via the function form).
+    const PAN_RATIO = 0.62;
+    const pinDist = () => Math.max(window.innerHeight * 0.85, Math.abs(maxX) * PAN_RATIO);
 
-    // Scroll-driven stagger for bound cards only
-    boundCards.forEach((c, i) => {
-      tl.to(c.item, { x: 0, opacity: 1, duration: CARD_DUR, ease: 'power2.out' }, i * CARD_LAG);
-    });
-
-    // Slide strip just enough to land the 10th card on-screen.
-    // Function-based so it re-evaluates correctly after resize invalidation.
-    tl.to(strip, { x: () => boundSlideX, duration: 1.0, ease: 'none' }, SLIDE_START);
-
-    // ── Auto-reveal free cards on pin release ────────────
-    let didAutoReveal = false;
-    const autoRevealFree = () => {
-      if (didAutoReveal || freeCards.length === 0) return;
-      didAutoReveal = true;
-      // Quiet background stagger — cards bloom in without fanfare
-      gsap.to(freeCards.map(c => c.item), {
-        opacity: 1,
-        x:       0,
-        duration: 0.45,
-        stagger:  0.028,
-        ease:     'power2.out',
-        delay:    0.15,
-      });
-    };
-
-    // ── ScrollTrigger pin ─────────────────────────────────
-    ScrollTrigger.create({
-      trigger:             pin,
-      start:               'top top',
-      end:                 () => `+=${window.innerHeight * PIN_MULT}`,
-      // Low scrub: Lenis already smooths the scroll, so a high scrub stacks a
-      // second ease on top — the strip keeps drifting after you stop, which reads
-      // as jitter. 0.4 tracks scroll tightly while staying smooth.
-      scrub:               0.4,
-      pin:                 true,
-      animation:           tl,
-      // anticipatePin fights Lenis (it shifts the pin a frame early against a
-      // smoothed scroll position) and stutters at the lock boundary. Off is steadier.
+    let isScrubbing = () => false;
+    const st = ScrollTrigger.create({
+      trigger: pin,
+      start: 'top top',
+      end: () => '+=' + pinDist(),
+      // Low scrub: Lenis already smooths scroll, so a high value stacks a second
+      // ease and the strip drifts after you stop (reads as jitter). 0.4 tracks
+      // tightly while staying smooth.
+      scrub: 0.4,
+      pin: true,
+      animation: tl,
       invalidateOnRefresh: true,
-
-      onLeave() {
-        // Pin released scrolling down — hand control to drag
-        dragEnabled = true;
-        dragX = parseFloat(gsap.getProperty(strip, 'x')) || boundSlideX;
-        autoRevealFree();
-        showRail();
-      },
-
-      onEnterBack() {
-        // User scrolled back up into the pin — GSAP scrub resumes
-        dragEnabled = false;
-        cancelAnimationFrame(draf);
-        draf = null;
-        vel  = 0;
-        hideRail(); // scrub owns the motion again while pinned
+      onUpdate: (self) => {
+        if (!isScrubbing()) setScrub(self.progress); // don't fight an active drag
+        rectsDirty = true;                            // cards moved — glow stale
       },
     });
 
-    // ── Resize: recompute scale + layout values ───────────
-    let resizeTimer;
+    // Reveal the scrubber + foot once the section settles into view.
+    ScrollTrigger.create({
+      trigger: pin, start: 'top 78%', once: true,
+      onEnter: () => gsap.to([scrubber, foot].filter(Boolean),
+        { opacity: 1, duration: 0.6, ease: 'power2.out', stagger: 0.08 }),
+    });
+
+    // Dragging the handle seeks the page scroll inside the pin range. Lenis owns
+    // the scroll, so we ask it to jump; ScrollTrigger then scrubs the strip.
+    isScrubbing = bindScrub((p) => {
+      const y = st.start + p * (st.end - st.start);
+      if (lenis) { try { lenis.scrollTo(y, { immediate: true }); } catch (_) { window.scrollTo(0, y); } }
+      else window.scrollTo(0, y);
+      rectsDirty = true;
+    });
+
+    // ── Resize: recompute scale + travel + pin, then refresh ──
+    let rt;
     window.addEventListener('resize', () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        const newH     = window.innerHeight - (header?.getBoundingClientRect().height ?? 200) - 48;
-        stripScale     = Math.min(0.75, Math.max(0.34, newH * 0.66 / 321));
+      clearTimeout(rt);
+      rt = setTimeout(() => {
+        stripScale = computeScale();
         strip.style.setProperty('--strip-scale', stripScale.toFixed(4));
-        // Wait one frame for CSS cascade to flush before measuring offsetLeft
         requestAnimationFrame(() => {
-          computeBoundSlide();
           computeMax();
-          updateRail();      // thumb size/position depend on maxX + strip width
-          rectsDirty = true; // glow centers stale after relayout
+          rectsDirty = true;
           ScrollTrigger.refresh();
         });
-      }, 100);
+      }, 120);
     });
   });
 

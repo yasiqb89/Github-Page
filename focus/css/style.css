@@ -1509,19 +1509,24 @@ img, svg, canvas { display: block; }
   opacity: 0; /* GSAP reveals it */
 }
 
-/* Strip wrapper — clips overflow, drag cursor */
+/* Strip wrapper — clips the panned cards horizontally */
 .journey__strip-wrap {
   width: 100%;
   flex: 1;
-  overflow-x: clip;    /* clips dragged cards left/right without locking y-axis */
+  overflow-x: clip;    /* cards pan via transform; clip the overflow horizontally */
   overflow-y: visible; /* lets 3D tilt bleed upward without clipping the card top */
-  cursor: grab;
   display: flex;
   align-items: center;
-  padding-bottom: clamp(16px, 2.5vh, 32px);
+  padding-bottom: clamp(10px, 1.5vh, 20px);
   box-sizing: border-box;
 }
-.journey__strip-wrap.is-dragging { cursor: grabbing; }
+/* Reduced-motion fallback: real horizontal scroll instead of the pinned scrub */
+.journey__strip-wrap.is-native {
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.journey__strip-wrap.is-native .journey__strip-item { scroll-snap-align: center; }
 
 /* The actual horizontal row */
 .journey__strip {
@@ -1545,34 +1550,89 @@ img, svg, canvas { display: block; }
   position: relative;
 }
 
-/* Horizontal-scroll affordance — a slim progress rail beneath the cards.
-   Reads as a refined custom scrollbar: the thumb's width is the fraction of the
-   strip currently on screen and its position is how far you've travelled — so it
-   tells the user the cards move sideways, with no pills or arrows. Fades in once
-   the pin releases (cards become draggable) and tracks drag/inertia live. */
-.journey__rail {
-  position: absolute;
-  bottom: clamp(14px, 2.5vh, 22px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: clamp(120px, 15vw, 200px);
-  height: 4px;
-  border-radius: 100px;
-  background: rgba(255, 255, 255, 0.09);
-  overflow: hidden;
-  opacity: 0;          /* GSAP reveals it after the pin releases */
-  pointer-events: none;
-  z-index: 10;
+/* Horizontal-scroll affordance — a premium progress scrubber beneath the cards.
+   The whole strip pans on vertical scroll (pinned scrub); this bar reflects that
+   progress and its handle can be grabbed to scrub directly. Tabular stage counter
+   on the left, current stage name on the right. JS drives a single --p (0–1) var
+   that positions both the fill and the handle. */
+.journey__scrubber {
+  --p: 0;
+  flex-shrink: 0;
+  width: min(460px, 74vw);
+  margin: 0 auto;
+  padding: clamp(2px, 0.8vh, 8px) 8px clamp(12px, 2vh, 22px);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  opacity: 0;          /* GSAP reveals it as the section settles */
 }
-.journey__rail-thumb {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 30%;
-  border-radius: 100px;
-  background: linear-gradient(90deg, rgba(191, 255, 71, 0.5), var(--lime));
-  box-shadow: 0 0 10px rgba(191, 255, 71, 0.35);
+.journey__scrub-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  line-height: 1;
+}
+.journey__scrub-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .1em;
+  color: var(--lime);
+}
+.journey__scrub-name {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+/* 18px tall hit area; the visible 3px line is drawn via ::before so the grab
+   target stays finger-friendly without a chunky bar. */
+.journey__scrub-track {
+  position: relative;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  touch-action: pan-y;   /* let a vertical page scroll start from the bar on touch */
+  outline: none;
+}
+.journey__scrub-track::before {
+  content: '';
+  position: absolute; left: 0; right: 0;
+  height: 3px; border-radius: 100px;
+  background: rgba(255, 255, 255, .12);
+}
+.journey__scrub-fill {
+  position: absolute; left: 0;
+  height: 3px; border-radius: 100px;
+  width: calc(var(--p) * 100%);
+  background: linear-gradient(90deg, rgba(191, 255, 71, .5), var(--lime));
+  pointer-events: none;
+}
+.journey__scrub-handle {
+  position: absolute; top: 50%;
+  left: calc(var(--p) * 100%);
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: var(--lime);
+  /* tight ring + shadow — large soft glows band on the flat #141414
+     (see af-field-banding memory), so keep blur radii small */
+  box-shadow: 0 0 0 5px rgba(191, 255, 71, .12), 0 2px 5px rgba(0, 0, 0, .45);
+  transform: translate(-50%, -50%);
+  transition: transform .18s cubic-bezier(.23, 1, .32, 1), box-shadow .18s ease;
+  pointer-events: none;
+}
+.journey__scrub-track:hover .journey__scrub-handle {
+  transform: translate(-50%, -50%) scale(1.18);
+  box-shadow: 0 0 0 6px rgba(191, 255, 71, .16), 0 2px 6px rgba(0, 0, 0, .5);
+}
+.journey__scrub-track:focus-visible .journey__scrub-handle {
+  box-shadow: 0 0 0 6px rgba(191, 255, 71, .22), 0 2px 6px rgba(0, 0, 0, .5);
+}
+.journey__scrub-track.is-grabbing { cursor: grabbing; }
+.journey__scrub-track.is-grabbing .journey__scrub-handle {
+  transform: translate(-50%, -50%) scale(1.28);
 }
 
 /* Card renders at natural 260×321; transform shrinks it to fit the item wrapper */

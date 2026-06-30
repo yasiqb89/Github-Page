@@ -69,7 +69,7 @@ async function init() {
   initHeroGradient(document.getElementById('hero-aura'));
   initGrid(document.getElementById('hero-grid'));
   initStoryboard(document.getElementById('overview'), gsap, lenis, ScrollTrigger);
-  initJourney(document.getElementById('journeyDeck'), STAGES, gsap, ScrollTrigger);
+  initJourney(document.getElementById('journeyDeck'), STAGES, gsap, ScrollTrigger, lenis);
   initNotifications(document.getElementById('problem'));
   initNumbersGrid(document.getElementById('numbers'));
 
