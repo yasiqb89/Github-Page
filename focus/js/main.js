@@ -53,7 +53,7 @@ async function init() {
   setupAnchors();
   setupReveals();
   setupScrollHeadlines();
-  setupReckoning();
+  setupSlider();
   setupProblemReveal();
   setupModes();
   setupModeInteractions();
@@ -183,6 +183,9 @@ function setupProblemReveal() {
   });
 }
 
+// (life-in-days grid removed — the cost section now renders a 12-month strip,
+//  driven by the slider in setupSlider below.)
+
 // ─── reveal-on-enter system ─────────────────────────────────
 function setupReveals() {
   document.querySelectorAll('.reveal, .r-up, .reveal-children').forEach((el) => {
@@ -263,123 +266,51 @@ function splitWords(el) {
   return out;
 }
 
-// ─── the reckoning (numbers section) ────────────────────────
-// A choice, not a slider: tapping an hours option recomputes a personal
-// verdict (days lost), drains the year-bar, and lights the reclaimed slice.
-// Same math the old calculator used — reframed as a reveal, not a control.
-function setupReckoning() {
-  const root = document.getElementById('numbers');
-  if (!root) return;
-  const chips = [...root.querySelectorAll('.rk__chip')];
-  if (!chips.length) return;
+// ─── interactive numbers slider ─────────────────────────────
+function setupSlider() {
+  const slider    = document.getElementById('screenSlider');
+  if (!slider) return;
+  const elScreen  = document.querySelector('[data-screen]');
+  const elLost    = document.querySelector('[data-days-lost]');
+  const elReclaim = document.querySelector('[data-days-reclaim]');
+  const boxes     = [...document.querySelectorAll('.numbers__month')];
+  const mlabels   = [...document.querySelectorAll('.numbers__mlabel')];
+  const momEl     = document.querySelector('[data-moments]');
+  const yearEl    = document.querySelector('[data-year]');
 
-  const numEl     = root.querySelector('[data-days-lost]');
-  const backEl    = root.querySelector('[data-days-reclaim]');
-  const hoursEl   = root.querySelector('[data-hours-month]');
-  const spent     = root.querySelector('[data-rk-spent]');
-  const reclaimEl = root.querySelector('[data-rk-reclaim]');
-  const barEl     = root.querySelector('[data-rk-bar]');
-  const momEl     = root.querySelector('[data-rk-moments]');
-  const underline = root.querySelector('.rk__underline');
+  const fmtH = (h) => {
+    const v = Math.round(h * 2) / 2;
+    return v % 1 === 0 ? String(v | 0) : v.toFixed(1);
+  };
 
-  const lostOf = (h) => Math.round((h * 365) / 24);
-  const backOf = (l) => Math.round(l * 0.33);
+  function renderAt(h) {
+    const pct     = ((h - +slider.min) / (+slider.max - +slider.min)) * 100;
+    slider.style.setProperty('--fill', `${pct}%`);
+    if (elScreen) elScreen.textContent = fmtH(h);
+    const lost    = Math.round((h * 365) / 24);
+    const reclaim = Math.round(lost * 0.33);
+    if (elLost)    elLost.textContent    = lost;
+    if (elReclaim) elReclaim.textContent = reclaim;
 
-  // Slide the lime underline under the active choice
-  function place(chip) {
-    if (!underline || !chip) return;
-    underline.style.width = `${chip.offsetWidth}px`;
-    underline.style.transform = `translateX(${chip.offsetLeft}px)`;
-  }
-
-  // Each verdict number counts up/down with a brief blur so the swap reads as
-  // one morph rather than a flicker (design-eng: blur masks the transition).
-  // The days + hours stats share a line, so they roll in lock-step.
-  function makeRoller(el) {
-    let raf = 0, shown = 0;
-    return {
-      set(v) { el.textContent = v; shown = v; },
-      roll(to) {
-        if (reduced) { el.textContent = to; shown = to; return; }
-        el.classList.add('is-rolling');
-        const from = shown, t0 = performance.now(), dur = 460;
-        cancelAnimationFrame(raf);
-        const step = (t) => {
-          const k = Math.min(1, (t - t0) / dur);
-          const e = 1 - Math.pow(1 - k, 3);
-          el.textContent = Math.round(from + (to - from) * e);
-          if (k < 1) { raf = requestAnimationFrame(step); }
-          else { el.textContent = to; shown = to; el.classList.remove('is-rolling'); }
-        };
-        raf = requestAnimationFrame(step);
-      },
-    };
-  }
-  const daysRoll  = makeRoller(numEl);
-  const hoursRoll = hoursEl ? makeRoller(hoursEl) : null;
-
-  function apply(h, chip, animate) {
-    const lost = lostOf(h), back = backOf(lost);
-    const hours = Math.round((h * 365) / 12);
-    if (animate) { daysRoll.roll(lost); hoursRoll?.roll(hours); }
-    else         { daysRoll.set(lost);  hoursRoll?.set(hours);  }
-    if (backEl) backEl.textContent = back;
-    if (momEl) momEl.innerHTML =
-      `Enough for <span class="lime">${Math.round(back / 2)}</span> family dinners, ` +
-      `<span class="lime">${Math.round(back / 4)}</span> gym sessions, or ` +
-      `<span class="lime">${Math.round(back / 3)}</span> days of deep work.`;
-    const spentPct = (lost / 365) * 100;
-    const recPct   = (back / 365) * 100;
-    const recLeft  = ((lost - back) / 365) * 100;
-    if (spent)     spent.style.width = `${spentPct}%`;
-    if (reclaimEl) { reclaimEl.style.left = `${recLeft}%`; reclaimEl.style.width = `${recPct}%`; reclaimEl.style.opacity = '1'; }
-    barEl?.setAttribute('aria-label',
-      `At ${h} hours a day, ${lost} days a year go to the screen; Focus gives back ${back}.`);
-    place(chip);
-  }
-
-  function select(chip, animate) {
-    chips.forEach((c) => c.setAttribute('aria-checked', 'false'));
-    chip.setAttribute('aria-checked', 'true');
-    apply(parseFloat(chip.dataset.h), chip, animate);
-  }
-
-  chips.forEach((c, i) => {
-    c.addEventListener('click', () => select(c, true));
-    c.addEventListener('keydown', (e) => {
-      const d = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1
-              : (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   ? -1 : 0;
-      if (!d) return;
-      e.preventDefault();
-      const n = chips[(i + d + chips.length) % chips.length];
-      n.focus();
-      select(n, true);
+    // The year, by the month: each box fills with the time the screen takes —
+    // whole months fill solid, the current month fills part-way (days-accurate).
+    const DPM = 365 / 12; // ~30.4 days per month-box
+    const months = Math.round(lost / DPM);
+    boxes.forEach((box, i) => {
+      const frac = Math.max(0, Math.min(1, (lost - i * DPM) / DPM));
+      box.style.setProperty('--fill', frac.toFixed(4));
     });
-  });
-
-  const active = chips.find((c) => c.getAttribute('aria-checked') === 'true') || chips[0];
-  const hActive = parseFloat(active.dataset.h);
-
-  // Resting state immediately so values are never stale (QA / reduced-motion).
-  apply(hActive, active, false);
-  requestAnimationFrame(() => place(active));
-  if (document.fonts?.ready) document.fonts.ready.then(() => place(active));
-  window.addEventListener('resize', () => {
-    place(chips.find((c) => c.getAttribute('aria-checked') === 'true') || active);
-  });
-
-  // Count-up flourish once when the section enters view (start the bar empty).
-  if (!reduced) {
-    const fill = () => apply(hActive, active, true);
-    daysRoll.set(0); hoursRoll?.set(0);
-    if (spent) spent.style.width = '0%';
-    if (reclaimEl) reclaimEl.style.opacity = '0';
-    if (root.getBoundingClientRect().top < innerHeight * 0.7) {
-      fill();
-    } else {
-      ScrollTrigger.create({ trigger: '#numbers', start: 'top 70%', once: true, onEnter: fill });
-    }
+    mlabels.forEach((l, i) => l.classList.toggle('is-on', i < months));
+    if (momEl) momEl.innerHTML =
+      `Enough for <span class="lime">${Math.round(reclaim / 2)}</span> family dinners, ` +
+      `<span class="lime">${Math.round(reclaim / 4)}</span> gym sessions, or ` +
+      `<span class="lime">${Math.round(reclaim / 3)}</span> days of deep work.`;
+    yearEl?.setAttribute('aria-label',
+      `At ${fmtH(h)} hours a day, about ${lost} days a year — roughly ${months} ${months === 1 ? 'month' : 'months'} — go to the screen.`);
   }
+
+  slider.addEventListener('input', () => renderAt(parseFloat(slider.value)));
+  renderAt(7);
 }
 
 // ─── modes: scroll-staggered description reveal ─────────────
