@@ -127,6 +127,8 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   // ── sizing ──
   const dpr = Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5);
   let w = 0, h = 0, bx = 0, by = 0, scale = 1;
+  let secRect = null, rowRect = null, rectDirty = false;   // cached rects for parallax (no per-move reflow)
+  let lastScrollAt = -1e9;                                  // last Lenis scroll time — gates per-frame gradient rebuilds
   const chipC = icons.map(() => ({ x: 0, y: 0 }));   // chip centres, row-local
   function measureChips() {
     if (!row) return;
@@ -139,31 +141,46 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   }
   function resize() {
     w = stage.clientWidth || 1; h = stage.clientHeight || 1;
-    canvas.width = w * dpr; canvas.height = h * dpr;
+    // Cap the backing store to a pixel budget. The field is a soft, defocused
+    // bloom, so rendering it at a lower internal resolution and letting CSS
+    // upscale it is visually identical — but it bounds the per-frame fill cost
+    // (clearRect + the wash blit are pixel-bound) on 4K / 5K / ultrawide
+    // displays, which is the main source of scroll jank on high-res screens.
+    const MAXPIX = 3.0e6;
+    let rdpr = dpr;
+    if (w * h * dpr * dpr > MAXPIX) rdpr = Math.sqrt(MAXPIX / (w * h));
+    canvas.width = Math.round(w * rdpr); canvas.height = Math.round(h * rdpr);
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(rdpr, 0, 0, rdpr, 0, 0);
     bx = w / 2;
     by = h * 0.50; // sits in the gap between the (raised) copy and the icons
     scale = clamp(Math.min(w, h) / 640, 0.55, 1.7);
+    secRect = section.getBoundingClientRect();
+    rowRect = row ? row.getBoundingClientRect() : null;
     measureChips();
   }
   resize();
   if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
   else addEventListener('resize', resize);
+  // Mark the cached rect stale on scroll; it's refreshed at most once per frame
+  // inside the rAF loop, so the mousemove handler never reads layout itself.
+  addEventListener('scroll', () => { rectDirty = true; }, { passive: true });
 
   // ── pointer: field parallax (spring) + dock cursor (row-local) ──
   let tpx = 0, tpy = 0, px = 0, py = 0, vx = 0, vy = 0;
   section.addEventListener('mousemove', (e) => {
-    const r = section.getBoundingClientRect();
-    tpx = ((e.clientX - r.left) / r.width) * 2 - 1;
-    tpy = ((e.clientY - r.top) / r.height) * 2 - 1;
+    // read the CACHED rect — never getBoundingClientRect here, which would force
+    // a synchronous layout on every move and stutter scrolling
+    if (!secRect) return;
+    tpx = ((e.clientX - secRect.left) / secRect.width) * 2 - 1;
+    tpy = ((e.clientY - secRect.top) / secRect.height) * 2 - 1;
   }, { passive: true });
 
   let rlx = -9999, rly = -9999, inRow = false;
   if (row && finePointer) {
     row.addEventListener('mousemove', (e) => {
-      const rr0 = row.getBoundingClientRect();
-      rlx = e.clientX - rr0.left; rly = e.clientY - rr0.top; inRow = true;
+      if (!rowRect) return;
+      rlx = e.clientX - rowRect.left; rly = e.clientY - rowRect.top; inRow = true;
     }, { passive: true });
     row.addEventListener('mouseleave', () => { inRow = false; });
   }
@@ -277,7 +294,7 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   // gradient every frame churns memory and shades millions of pixels; instead we
   // bake it into a small offscreen buffer (only when the colour changes) and blit
   // it each frame — a soft gradient upscales with no visible artefacts.
-  const WASH = 320;
+  const WASH = 512;
   const washCv = document.createElement('canvas'); washCv.width = washCv.height = WASH;
   const washc = washCv.getContext('2d');
   let washKey = -1;
@@ -288,9 +305,18 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     const k = Math.min(1.7, LIME_LUM / Math.max(1, LUM(c[0], c[1], c[2])));   // brightness compensation
     washc.clearRect(0, 0, WASH, WASH);
     const g = washc.createRadialGradient(WASH / 2, WASH / 2, 0, WASH / 2, WASH / 2, WASH / 2);
-    g.addColorStop(0,   `rgba(${c[0]},${c[1]},${c[2]},${(.25 * k).toFixed(3)})`);
-    g.addColorStop(0.6, `rgba(${c[0]},${c[1]},${c[2]},${(.09 * k).toFixed(3)})`);
-    g.addColorStop(1,   `rgba(${c[0]},${c[1]},${c[2]},0)`);
+    // Smooth, near-Gaussian falloff. A 3-stop ramp left visible contour rings on
+    // high-DPI / 4K screens (8-bit banding over the dark background); the extra
+    // stops dissolve the steps. Peak alpha kept low (~.11) so any residual 8-bit
+    // step is below the perceptual threshold — the static grain layer dithers the
+    // rest. Reads as a soft, premium pool rather than a banded wash.
+    g.addColorStop(0,    `rgba(${c[0]},${c[1]},${c[2]},${(.110 * k).toFixed(3)})`);
+    g.addColorStop(0.16, `rgba(${c[0]},${c[1]},${c[2]},${(.078 * k).toFixed(3)})`);
+    g.addColorStop(0.34, `rgba(${c[0]},${c[1]},${c[2]},${(.043 * k).toFixed(3)})`);
+    g.addColorStop(0.54, `rgba(${c[0]},${c[1]},${c[2]},${(.019 * k).toFixed(3)})`);
+    g.addColorStop(0.74, `rgba(${c[0]},${c[1]},${c[2]},${(.006 * k).toFixed(3)})`);
+    g.addColorStop(0.88, `rgba(${c[0]},${c[1]},${c[2]},${(.002 * k).toFixed(3)})`);
+    g.addColorStop(1,    `rgba(${c[0]},${c[1]},${c[2]},0)`);
     washc.fillStyle = g; washc.fillRect(0, 0, WASH, WASH);
   }
 
@@ -306,14 +332,28 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     const cx = bx + px * 26, cy = by + py * 18;
 
     ctx.clearRect(0, 0, w, h);
-    const R = Math.min(w, h) * 0.66;
-    buildWash([cr, cg, cb]);
+    // Glow radius — kept tight so the bloom stays a contained pool behind the
+    // content rather than washing across the whole section.
+    const R = Math.min(w, h) * 0.42;
+    // Rebuilding the wash (a 512² multi-stop radial fill) and the sprite is only
+    // needed when the glow COLOUR changes — which only happens while curC eases
+    // toward a hovered feature's colour. Two guards keep that off the scroll path:
+    //  • quantise the colour to steps of 8 so a transition rebuilds a handful of
+    //    times instead of every frame — invisible on a soft, low-alpha bloom;
+    //  • never rebuild while actively scrolling — the last frame's wash is reused,
+    //    so a hover-then-scroll can't land a 260k-pixel gradient fill mid-scroll
+    //    (the exact cause of the post-hover scroll jitter). The hue catches up the
+    //    instant scroll settles.
+    const qc = [cr & ~7, cg & ~7, cb & ~7];
+    // Skip the rebuild while actively scrolling — but NEVER skip the first build
+    // (washKey === -1), or the field renders blank while you scroll into the
+    // section and the ring only pops in once scrolling stops.
+    if (washKey === -1 || performance.now() - lastScrollAt >= 90) { buildWash(qc); buildSprite(qc); }
     ctx.drawImage(washCv, cx - R, cy - R, R * 2, R * 2);
 
     // Direct morph: every particle simply eases from its current spot toward the
     // new glyph (morph buffer is set on hover). No mid-transition scatter — a
     // clean A→B flow instead of an explode-and-reform.
-    buildSprite([cr, cg, cb]);
     ctx.globalCompositeOperation = 'lighter';   // additive — overlaps bloom into glow
     const tm = performance.now() * 0.001, baseDot = 3.2 * scale;
     for (let i = 0; i < drawN; i++) {
@@ -422,7 +462,7 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   // main thread and stuttering the scroll. .af--scrolling disables pointer-events on
   // the row (CSS), so no accidental hover; it's lifted ~150ms after scroll settles,
   // and a deliberate mouse move onto an icon then activates it as normal.
-  let lastScrollAt = -1e9, scrollSettle = null;
+  let scrollSettle = null;
   if (lenis && lenis.on) lenis.on('scroll', () => {
     lastScrollAt = performance.now();
     if (!finePointer) return;             // touch: no hover to suppress, keep taps live
@@ -436,6 +476,8 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     if (!running) { raf = 0; return; }
     raf = requestAnimationFrame(loop);
     tick++;
+    // refresh the cached parallax rect at most once per frame, only after a scroll
+    if (rectDirty) { secRect = section.getBoundingClientRect(); if (row) rowRect = row.getBoundingClientRect(); rectDirty = false; }
     // frame-time guard: track a smoothed dt and trim/grow the drawn particle
     // count so the field holds ~60fps on whatever device it lands on.
     const now = performance.now();
@@ -446,9 +488,13 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
       if (emaDt > 22 && drawN > N * 0.45)      drawN = Math.max((N * 0.45) | 0, drawN - ((N * 0.12) | 0));
       else if (emaDt < 18 && drawN < N)        drawN = Math.min(N, drawN + ((N * 0.05) | 0));
     }
-    if (now - lastScrollAt < 90 && (tick & 1)) return;
+    const scrolling = now - lastScrollAt < 90;
+    if (scrolling && (tick & 1)) return;
     draw();
-    applyChipTransforms(false);
+    // Dock magnification is frozen mid-scroll (the row ignores the pointer), so
+    // skip the 15 per-icon transform writes while actively scrolling — they resume
+    // and ease the instant scroll settles.
+    if (!scrolling) applyChipTransforms(false);
   }
   const io = new IntersectionObserver((entries) => {
     running = entries[0].isIntersecting;

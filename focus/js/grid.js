@@ -11,6 +11,7 @@ export function initGrid(canvas) {
   let w = 0, h = 0, dpr = Math.min(devicePixelRatio || 1, 2);
   let mx = -9999, my = -9999, raf = null, lastActive = 0;
   let lastCi = null, lastCj = null;
+  let visible = true;   // set by IntersectionObserver — gates the loop off-screen
 
   const roundable = typeof ctx.roundRect === 'function';
   const LIME = [191, 255, 71];   // --lime
@@ -40,9 +41,16 @@ export function initGrid(canvas) {
     }
   }
 
+  // Don't light the grid under the nav strip — the comet trail was firing right
+  // under the cursor as the user reached for the nav links, fighting their hover
+  // state. Clear + bail when the pointer is in the top NAV_SAFE band.
+  const NAV_SAFE = 74;
+
   function onMove(e) {
+    if (!visible) return;   // hero scrolled away — don't track or wake the loop
     const r = canvas.getBoundingClientRect();
     mx = e.clientX - r.left; my = e.clientY - r.top;
+    if (my < NAV_SAFE) { onLeave(); return; }
     const ci = Math.floor(mx / CELL), cj = Math.floor(my / CELL);
     if (lastCi === null) { lastCi = ci; lastCj = cj; }
 
@@ -166,9 +174,22 @@ export function initGrid(canvas) {
     addEventListener('mouseleave', onLeave, { passive: true });
   }
 
+  // Gate everything on the hero being in view — mirrors heroGradient.js /
+  // storyboard.js. Once the hero scrolls past, a stray mousemove down the page
+  // can't wake a full grid repaint loop. Re-paints the static grid on re-entry.
+  let io = null;
+  if (!reduced && typeof IntersectionObserver === 'function') {
+    io = new IntersectionObserver((entries) => {
+      visible = entries[0].isIntersecting;
+      if (!visible) { onLeave(); if (raf) { cancelAnimationFrame(raf); raf = null; } }
+    }, { rootMargin: '0px' });
+    io.observe(canvas);
+  }
+
   return {
     dispose() {
       if (raf) cancelAnimationFrame(raf);
+      if (io) io.disconnect();
       removeEventListener('resize', resize);
       removeEventListener('mousemove', onMove);
       removeEventListener('mouseleave', onLeave);

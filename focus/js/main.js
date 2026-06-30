@@ -2,7 +2,7 @@
 import gsap from 'gsap';
 import ScrollTrigger from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import { initCursor, initMagnetic } from './cursor.js';
+import { initMagnetic } from './cursor.js';
 import { runPreloader } from './preloader.js';
 import { initGrid } from './grid.js';
 import { initHeroGradient } from './heroGradient.js';
@@ -49,7 +49,6 @@ async function init() {
     gsap.ticker.lagSmoothing(0);
   }
 
-  initCursor();
   initMagnetic();
   setupAnchors();
   setupReveals();
@@ -212,7 +211,11 @@ function setupLifeGrid() {
     _gridCells.push(c);
   }
 
-  _applyGridStates(5.5);
+  // Seed the grid from the slider's current value so it agrees with the header
+  // count and moment tiles on first paint. (setupSlider's renderAt runs before
+  // these cells exist, so the grid would otherwise be stuck at a stale default.)
+  const slider = document.getElementById('screenSlider');
+  _applyGridStates(slider ? parseFloat(slider.value) : 7);
 
   if (reduced) {
     gsap.set(_gridCells, { opacity: 1 });
@@ -245,7 +248,7 @@ function setupReveals() {
 function setupScrollHeadlines() {
   document.querySelectorAll('[data-scroll-reveal]').forEach((el) => {
     const words = splitWords(el);
-    if (reduced) { words.forEach((w) => { w.style.color = 'rgba(230,235,241,1)'; if (w.querySelector('.lime')) w.querySelector('.lime').style.color = 'rgba(191,255,71,1)'; }); return; }
+    if (reduced) { words.forEach((w) => { w.style.color = 'rgba(230,235,241,1)'; const lime = w.querySelector('.lime'); if (lime) lime.style.opacity = '1'; }); return; }
 
     // Optional: drive this element's fill off another element's scroll position
     // (data-sr-trigger) so two headlines reveal in sync — e.g. the cost-section
@@ -264,8 +267,12 @@ function setupScrollHeadlines() {
           const t = Math.max(0, Math.min(1, (p - wordStart) / (wordEnd - wordStart)));
           const eased = 1 - Math.pow(1 - t, 2);
           const a = 0.15 + eased * 0.85;
-          if (w.querySelector('.lime')) {
-            w.querySelector('.lime').style.color = `rgba(191,255,71,${a})`;
+          const lime = w.querySelector('.lime');
+          if (lime) {
+            // Drive opacity (not colour) so a clipped-gradient sheen — e.g. the
+            // journey headline's lime words — survives the reveal; for solid lime
+            // words this looks identical to fading the colour alpha.
+            lime.style.opacity = a;
           } else {
             w.style.color = `rgba(230,235,241,${a})`;
           }
@@ -408,6 +415,18 @@ function setupModesMosaic() {
     return;
   }
 
+  // Precompute per-card constants ONCE (isTop direction + reveal offset) instead
+  // of an O(n) topCards.includes() per card per frame, and cache the last value
+  // written so settled cards are skipped — the scrub only writes the handful of
+  // cards mid-transition each frame, not all ~30.
+  const topSet = new Set(topCards);
+  const meta = allCards.map((card, i) => ({
+    card,
+    dir: topSet.has(card) ? -14 : 14,
+    offset: (i / allCards.length) * 0.6,
+    last: -1,
+  }));
+
   ScrollTrigger.create({
     trigger: '.modes',
     start: 'top 55%',
@@ -416,15 +435,15 @@ function setupModesMosaic() {
     onUpdate(self) {
       if (_hoverCat) return; // let hover animation own opacity
       const p = self.progress;
-      allCards.forEach((card, i) => {
-        const offset = (i / allCards.length) * 0.6;
-        const t = Math.max(0, Math.min(1, (p - offset) / 0.4));
+      for (const m of meta) {
+        const t = Math.max(0, Math.min(1, (p - m.offset) / 0.4));
         const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        if (Math.abs(eased - m.last) < 0.004) continue; // settled — skip the write
+        m.last = eased;
         const base = eased * 0.16;
-        card.dataset.baseOpacity = base.toFixed(4);
-        const isTop = topCards.includes(card);
-        gsap.set(card, { opacity: base, y: (1 - eased) * (isTop ? -14 : 14) });
-      });
+        m.card.dataset.baseOpacity = base.toFixed(4);
+        gsap.set(m.card, { opacity: base, y: (1 - eased) * m.dir });
+      }
     },
   });
 }

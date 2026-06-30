@@ -282,41 +282,23 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
 
   root.appendChild(wrap);
 
-  // ── Hide custom cursor over the card strip ───────────────
-  const cursorDot   = document.getElementById('cursor');
-  const cursorTrail = document.getElementById('cursor-trail');
-  if (cursorDot && cursorTrail) {
-    wrap.addEventListener('mouseenter', () => {
-      cursorDot.classList.add('is-over-cards');
-      cursorTrail.classList.add('is-over-cards');
-    }, { passive: true });
-    wrap.addEventListener('mouseleave', () => {
-      cursorDot.classList.remove('is-over-cards');
-      cursorTrail.classList.remove('is-over-cards');
-    }, { passive: true });
-  }
+  // ── 2. Scroll progress rail ──────────────────────────────
+  // Premium horizontal-scroll affordance (replaces the old "drag to explore"
+  // pill + arrows). A slim track with a lime thumb: the thumb's width is the
+  // fraction of the strip on screen and its position is how far you've travelled,
+  // so it reads as a refined scrollbar that says "these cards move sideways"
+  // without any pill or arrows. Driven by updateRail() below.
+  const rail = document.createElement('div');
+  rail.className = 'journey__rail';
+  rail.setAttribute('aria-hidden', 'true');
 
-  // ── 2. Drag hint pill ────────────────────────────────────
-  const hint      = document.createElement('div');
-  hint.className  = 'journey__drag-hint';
-  hint.setAttribute('aria-hidden', 'true');
-
-  const hintLeft  = document.createElement('span');
-  hintLeft.className  = 'journey__drag-hint-arrow';
-  hintLeft.textContent  = '←';
-
-  const hintLabel = document.createElement('span');
-  hintLabel.textContent = 'drag to explore';
-
-  const hintRight = document.createElement('span');
-  hintRight.className = 'journey__drag-hint-arrow';
-  hintRight.textContent = '→';
-
-  hint.append(hintLeft, hintLabel, hintRight);
+  const railThumb = document.createElement('span');
+  railThumb.className = 'journey__rail-thumb';
+  rail.appendChild(railThumb);
 
   const pin  = root.closest('.journey__pin') ?? root.parentElement;
   const foot = pin?.querySelector('.journey__foot');
-  pin?.appendChild(hint);
+  pin?.appendChild(rail);
 
   // ── 3. Layout + animation (after first paint) ────────────
   requestAnimationFrame(() => {
@@ -366,6 +348,7 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
     const applyX = (x) => {
       dragX = Math.max(maxX, Math.min(0, x));
       strip.style.transform = `translateX(${dragX}px)`;
+      updateRail();
     };
 
     const coast = () => {
@@ -374,6 +357,7 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
         vel   *= 0.93;
         dragX  = Math.max(maxX, Math.min(0, dragX + vel));
         strip.style.transform = `translateX(${dragX}px)`;
+        updateRail();
         rectsDirty = true; // cards coasting — glow centers stale
         if (dragX <= maxX || dragX >= 0) vel = 0;
         draf = Math.abs(vel) > 0.2 ? requestAnimationFrame(tick) : null;
@@ -381,31 +365,31 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
       draf = requestAnimationFrame(tick);
     };
 
-    // ── Hint lifecycle ───────────────────────────────────
-    let hintVisible   = false;
-    let hintDismissed = false;
-
-    const showHint = () => {
-      if (hintVisible || hintDismissed || reduced) return;
-      hintVisible = true;
-      gsap.to(hint, { opacity: 1, duration: 0.5, ease: 'power2.out', delay: 0.3 });
-      // Gentle looping arrow nudge — signals "this is interactive"
-      gsap.to(hintLeft,  { x: -3, duration: 0.65, ease: 'power1.inOut', yoyo: true, repeat: -1, delay: 0.8 });
-      gsap.to(hintRight, { x:  3, duration: 0.65, ease: 'power1.inOut', yoyo: true, repeat: -1, delay: 0.8 });
+    // ── Rail lifecycle ───────────────────────────────────
+    // Map the strip's current x onto the thumb: width = the visible fraction of
+    // the strip, left = how far through the travel you are (0 at the first card,
+    // 1 at the last). Called on every drag/inertia frame and on resize.
+    let railVisible = false;
+    const updateRail = () => {
+      if (maxX >= 0) { railThumb.style.left = '0%'; railThumb.style.width = '100%'; return; }
+      const cur     = parseFloat(gsap.getProperty(strip, 'x')) || 0;
+      const p       = Math.max(0, Math.min(1, cur / maxX));            // 0 at start → 1 at end
+      const visible = Math.max(0.14, Math.min(1, wrap.clientWidth / strip.scrollWidth));
+      railThumb.style.width = (visible * 100).toFixed(2) + '%';
+      railThumb.style.left  = (p * (1 - visible) * 100).toFixed(2) + '%';
     };
 
-    const hideHint = () => {
-      if (!hintVisible) return;
-      hintVisible = false;
-      gsap.killTweensOf([hint, hintLeft, hintRight]);
-      gsap.set([hintLeft, hintRight], { x: 0 });
-      gsap.to(hint, { opacity: 0, duration: 0.25, ease: 'power1.in' });
+    const showRail = () => {
+      updateRail();
+      if (railVisible || reduced) return;
+      railVisible = true;
+      gsap.to(rail, { opacity: 1, duration: 0.55, ease: 'power2.out', delay: 0.25 });
     };
 
-    const dismissHint = () => {
-      if (hintDismissed) return;
-      hintDismissed = true;
-      hideHint();
+    const hideRail = () => {
+      if (!railVisible) return;
+      railVisible = false;
+      gsap.to(rail, { opacity: 0, duration: 0.3, ease: 'power1.in' });
     };
 
     // ── Pointer / wheel events ───────────────────────────
@@ -420,7 +404,6 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
       strip.style.pointerEvents = 'none';
       wrap.classList.add('is-dragging');
       wrap.setPointerCapture(e.pointerId);
-      dismissHint();
     });
 
     wrap.addEventListener('pointermove', (e) => {
@@ -451,7 +434,6 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
       vel = -dx * 0.5;
       applyX(dragX - dx);
       coast();
-      dismissHint();
       rectsDirty = true; // cards moved — glow centers stale
     }, { passive: false });
 
@@ -546,7 +528,10 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
     if (reduced) {
       cardEls.forEach(({ item }) => { item.style.opacity = '1'; item.style.transform = 'none'; });
       if (foot) foot.style.opacity = '1';
-      hint.style.display = 'none';
+      // Dragging is enabled immediately for reduced-motion, so show the rail
+      // statically (no fade) as the scroll affordance.
+      gsap.set(rail, { opacity: 1 });
+      updateRail();
       return;
     }
 
@@ -597,10 +582,14 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
       trigger:             pin,
       start:               'top top',
       end:                 () => `+=${window.innerHeight * PIN_MULT}`,
-      scrub:               1.0,
+      // Low scrub: Lenis already smooths the scroll, so a high scrub stacks a
+      // second ease on top — the strip keeps drifting after you stop, which reads
+      // as jitter. 0.4 tracks scroll tightly while staying smooth.
+      scrub:               0.4,
       pin:                 true,
       animation:           tl,
-      anticipatePin:       1,
+      // anticipatePin fights Lenis (it shifts the pin a frame early against a
+      // smoothed scroll position) and stutters at the lock boundary. Off is steadier.
       invalidateOnRefresh: true,
 
       onLeave() {
@@ -608,7 +597,7 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
         dragEnabled = true;
         dragX = parseFloat(gsap.getProperty(strip, 'x')) || boundSlideX;
         autoRevealFree();
-        showHint();
+        showRail();
       },
 
       onEnterBack() {
@@ -617,7 +606,7 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
         cancelAnimationFrame(draf);
         draf = null;
         vel  = 0;
-        hideHint(); // hint says "drag" but drag is now disabled
+        hideRail(); // scrub owns the motion again while pinned
       },
     });
 
@@ -633,6 +622,7 @@ export function initJourney(root, stages, gsap, ScrollTrigger) {
         requestAnimationFrame(() => {
           computeBoundSlide();
           computeMax();
+          updateRail();      // thumb size/position depend on maxX + strip width
           rectsDirty = true; // glow centers stale after relayout
           ScrollTrigger.refresh();
         });

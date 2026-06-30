@@ -26,12 +26,6 @@
 <body>
 
 
-<!-- Fluid cursor (WebGL) — sits behind content, above section backgrounds -->
-
-<!-- Custom lime pointer -->
-<div id="cursor" aria-hidden="true"></div>
-<div id="cursor-trail" aria-hidden="true"><span class="cursor-label"></span></div>
-
 <!-- Preloader — Kinetic Wordmark (final word flies up to become the nav logo) -->
 <div id="preloader" aria-hidden="true">
   <div class="kw__bg"></div>
@@ -96,7 +90,7 @@
 <!-- ════════════════════════════════════════
      PROBLEM STATEMENT
 ════════════════════════════════════════ -->
-<section class="s s--blk problem" id="problem" style="--from:#141414;--to:#0d1824">
+<section class="s s--blk problem" id="problem" style="--from:#141414;--to:#141414">
   <div class="problem__sticky">
     <div class="problem__noise" aria-hidden="true"></div>
     <div class="problem__layout page-grid">
@@ -114,14 +108,14 @@
 <!-- ════════════════════════════════════════
      SECTION 1 — NUMBERS  (black)
 ════════════════════════════════════════ -->
-<section class="s s--blk numbers" id="numbers" style="--from:#0d1824;--to:#0a0e0c">
+<section class="s s--blk numbers" id="numbers" style="--from:#141414;--to:#141414">
   <div class="numbers__noise" aria-hidden="true"></div>
   <div class="numbers__wrap">
 
     <header class="numbers__header">
       <p class="kicker r-up">The cost</p>
       <h2 class="numbers__hed r-scroll" data-scroll-reveal>
-        On average, <span class="lime" data-days-lost>83</span> days a year<br>go to the scroll.
+        On average, <span class="lime" data-days-lost>106</span> days a year<br>go to the scroll.
       </h2>
     </header>
 
@@ -175,7 +169,7 @@
 <!-- ════════════════════════════════════════
      SECTION ✦ — FEATURE SHOWCASE  (hover-driven ambient field)
 ════════════════════════════════════════ -->
-<section class="s s--blk af" id="overview" style="--from:#0a0e0c;--to:#0a0e0c">
+<section class="s s--blk af" id="overview" style="--from:#141414;--to:#141414">
   <canvas class="af__canvas" id="af-canvas" aria-hidden="true"></canvas>
 
   <!-- rebuilt app fragments — flank the copy, blend into the field; shown on hover.
@@ -705,7 +699,7 @@
 
     <!-- copy: frozen kicker + single morphing headline + line -->
     <div class="af__copy">
-      <p class="kicker r-up af__kicker">Everything inside Focus</p>
+      <p class="kicker r-up af__kicker">Inside Focus</p>
       <h2 class="af__title">Everything you need to take your <span class="lime">attention</span> back.</h2>
       <p class="af__line">Hover any tool to see how it keeps you focused.</p>
     </div>
@@ -765,17 +759,17 @@
 <!-- ════════════════════════════════════════
      SECTION 2 — BLOCKING  (midnight)
 ════════════════════════════════════════ -->
-<section class="s s--mid block" id="block" style="--from:#0a0e0c;--to:#0d1824">
+<section class="s s--mid block" id="block" style="--from:#141414;--to:#141414">
   <div class="page-grid block__grid">
 
     <!-- left: copy -->
     <div class="block__copy">
-      <p class="kicker r-up">The session</p>
-      <h2 class="hed r-scroll" data-scroll-reveal>Block what<br><span class="lime">pulls</span> you away.</h2>
-      <blockquote class="pullquote reveal">
-        The deepest form of productivity isn't efficiency,
-        it's the courage to <span class="lime">protect one thing.</span>
-      </blockquote>
+      <p class="kicker r-up">Your attention</p>
+      <h2 class="hed r-scroll" data-scroll-reveal>Protect what<br>pulls you <span class="lime">forward</span>.</h2>
+      <p class="pullquote reveal">
+        Block the apps that hijack you, schedule your sessions, set the limits —
+        and let focus become the default, not the fight.
+      </p>
     </div>
 
     <!-- right: Safari + iPhone combo mockup -->
@@ -790,11 +784,18 @@
         </iframe>
       </div>
 
-      <!-- iPhone mockup — full Focus session photo, standing in front of the Safari window -->
-      <div class="iphone-photo">
-        <img class="iphone-photo__img" src="img/block-phone.webp"
-             alt="Focus running a blocking session on an iPhone"
-             width="900" height="1773" loading="lazy" decoding="async">
+      <!-- iPhone — real phone mockup PNG with live video playing on the screen.
+           The video is absolutely overlaid on the measured screen area (8.46% / 4.29%);
+           the PNG frame sits on top naturally via DOM order. -->
+      <div class="device-phone-wrap">
+        <img class="device-phone-img"
+             src="img/block-phone-mockup.png"
+             alt="Focus on iPhone — a blocked-app screen reading: Moment of Choice. Instagram is blocked during this focus session. Give the urge a moment to pass."
+             width="1419"
+             loading="lazy">
+        <video class="device-phone-video" autoplay muted loop playsinline>
+          <source src="img/block-phone-screen.mp4" type="video/mp4">
+        </video>
       </div>
 
       </div><!-- /.mockup-combo -->
@@ -806,7 +807,7 @@
 <!-- ════════════════════════════════════════
      SECTION 3 — MODES  (black)
 ════════════════════════════════════════ -->
-<section class="s s--blk modes" id="modes" style="--from:#0d1824;--to:#0a0e0c">
+<section class="s s--blk modes" id="modes" style="--from:#141414;--to:#141414">
   <div class="page-grid modes__grid">
     <header class="modes__head">
       <p class="kicker r-up">HABITS</p>
@@ -915,7 +916,7 @@
 <!-- ════════════════════════════════════════
      SECTION 4 — JOURNEY  (midnight)
 ════════════════════════════════════════ -->
-<section class="s s--mid journey" id="journey" style="--from:#0a0e0c;--to:#13212f">
+<section class="s s--mid journey" id="journey" style="--from:#141414;--to:#141414">
   <div class="journey__pin">
     <div class="page-grid journey__header-grid">
       <div class="journey__head">
@@ -924,20 +925,20 @@
       </div>
     </div>
     <div id="journeyDeck" aria-label="Identity stage journey"></div>
-    <p class="journey__foot">A journey measured not in days, but in depth. Every session contributes to who you become — twenty-two stages, each one earned.</p>
+    <p class="journey__foot">A journey measured not in days, but in depth. Every session contributes to who you become · twenty-two stages, each one earned.</p>
   </div>
 </section>
 
 <!-- ════════════════════════════════════════
      SECTION 5 — AVAILABILITY  (black)
 ════════════════════════════════════════ -->
-<section class="s s--blk get" id="get" style="--from:#0a0e0c;--to:#0a0e0c">
+<section class="s s--blk get" id="get" style="--from:#141414;--to:#141414">
   <div class="wrap get__inner">
     <p class="kicker r-up" style="justify-content:center">Try Focus for free</p>
-    <h2 class="hed r-scroll get__title" data-scroll-reveal>Your first session<br>is waiting.</h2>
-    <p class="get__sub reveal">Three modes, the full identity journey, and the shield that holds — no account required.</p>
+    <h2 class="hed r-scroll get__title" data-scroll-reveal>Your best <span class="lime">hours</span><br>start here.</h2>
+    <p class="get__sub reveal">Three modes, the full identity journey, and the shield that holds · no account required.</p>
     <div class="get__stores reveal-children">
-      <a class="store-btn store-btn--lime" id="storeBtn" href="#" aria-label="Download on the App Store" data-cursor="App Store">
+      <a class="store-btn store-btn--lime" id="storeBtn" href="#" aria-label="Download on the App Store">
         <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
         <span class="store-btn__text"><span class="store-btn__sm">Download on the</span><span class="store-btn__lg">App Store</span></span>
       </a>
@@ -950,11 +951,10 @@
         <span class="store-btn__text"><span class="store-btn__sm">Coming soon</span><span class="store-btn__lg">Chrome</span></span>
       </span>
     </div>
-    <p class="get__fine">iOS 17+ · 7-day free trial on annual · Screen Time permission required</p>
   </div>
 </section>
 
-<footer class="s s--blk footer" style="--from:#0a0e0c;--to:#070a09">
+<footer class="s s--blk footer" style="--from:#141414;--to:#141414">
   <div class="footer__inner">
     <span class="footer__logo"><svg class="nav__mark" viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="#BFFF47" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="34.31 9.67" transform="rotate(-90 10 10)" filter="url(#nav-arc-glow)"/></svg>Focus</span>
     <div class="footer__links">

@@ -57,38 +57,7 @@ img, svg, canvas { display: block; }
 /* ─────────────────────────────────────
    FLUID CURSOR CANVAS
 ───────────────────────────────────── */
-/* fluid cursor removed */
-
-/* ─────────────────────────────────────
-   CUSTOM CURSOR
-───────────────────────────────────── */
-#cursor {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--lime);
-  position: fixed; top: 0; left: 0;
-  pointer-events: none; z-index: 9999;
-  transform: translate(-50%, -50%);
-  transition: transform .1s, width .2s var(--ease), height .2s var(--ease), background .2s;
-  will-change: transform;
-}
-#cursor-trail {
-  width: 36px; height: 36px; border-radius: 50%;
-  border: 1px solid rgba(191,255,71,.3);
-  position: fixed; top: 0; left: 0;
-  pointer-events: none; z-index: 9998;
-  transform: translate(-50%, -50%);
-  transition: transform .18s var(--ease), width .25s var(--ease), height .25s var(--ease), opacity .2s;
-  display: flex; align-items: center; justify-content: center;
-  will-change: transform;
-}
-.cursor-label { font-size: 9px; font-weight: 700; letter-spacing: .08em; color: var(--lime); opacity: 0; transition: opacity .2s; }
-/* hover no longer expands the dot into a lime circle — it stays a small dot */
-#cursor-trail.is-hover { opacity: 0; }
-#cursor-trail.has-label { width: auto; height: auto; padding: 6px 12px; border-radius: 50px; background: rgba(191,255,71,.1); }
-#cursor-trail.has-label .cursor-label { opacity: 1; }
-@media (hover: none) { #cursor, #cursor-trail { display: none; } }
-#cursor.is-over-cards,
-#cursor-trail.is-over-cards { opacity: 0; transition: opacity 0.2s; }
+/* custom cursor removed — site uses the native pointer */
 
 /* ─────────────────────────────────────
    PRELOADER
@@ -134,8 +103,10 @@ img, svg, canvas { display: block; }
   background: rgba(14,16,13,0);
   -webkit-backdrop-filter: blur(0px) saturate(1);
   backdrop-filter: blur(0px) saturate(1);
-  transition: background-color .4s var(--ease), backdrop-filter .4s var(--ease),
-    -webkit-backdrop-filter .4s var(--ease), box-shadow .4s var(--ease),
+  /* backdrop-filter is intentionally NOT transitioned — easing blur 0→20px
+     re-blurs the whole backdrop every frame for 400ms on each scroll-threshold
+     cross. The blur snaps instead (one reblur); colour/shadow still fade. */
+  transition: background-color .4s var(--ease), box-shadow .4s var(--ease),
     transform .35s var(--ease);
 }
 #nav.nav--hidden { transform: translateY(-100%); }
@@ -158,7 +129,7 @@ img, svg, canvas { display: block; }
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 4px;
   list-style: none;
   padding: 0;
 }
@@ -168,14 +139,22 @@ img, svg, canvas { display: block; }
   font-weight: 500;
   letter-spacing: .01em;
   color: rgba(255,255,255,.72);
-  transition: color 180ms var(--ease);
+  padding: 7px 12px;
+  border-radius: 9px;
+  /* Hover pill is a static dark scrim — no backdrop-filter. The hero grid is
+     already suppressed under the nav strip (see grid.js NAV_SAFE), so the link
+     never has a live comet trail behind it; a plain scrim separates the text
+     and avoids animating an expensive per-frame blur. */
+  background: rgba(12,15,10,0);
+  transition: color 180ms var(--ease), background-color 220ms var(--ease),
+    transform 200ms var(--ease);
   white-space: nowrap;
 }
-/* lime underline marks the section you're in */
+/* lime underline marks the section you're in (and grows on hover) */
 .nav__link::after {
   content: '';
   position: absolute;
-  left: 0; right: 0; bottom: -6px;
+  left: 12px; right: 12px; bottom: 3px;
   height: 2px; border-radius: 2px;
   background: var(--lime);
   transform: scaleX(0);
@@ -185,8 +164,14 @@ img, svg, canvas { display: block; }
 .nav__link.is-active { color: var(--ink); }
 .nav__link.is-active::after { transform: scaleX(1); }
 @media (hover: hover) and (pointer: fine) {
-  .nav__link:hover { color: var(--ink); }
+  .nav__link:hover {
+    color: var(--ink);
+    background: rgba(12,15,10,.6);
+    transform: translateY(-1px);
+  }
+  .nav__link:hover::after { transform: scaleX(1); }
 }
+.nav__link:active { transform: translateY(0) scale(.97); }
 @media (max-width: 680px) { .nav__links { display: none; } }
 
 /* lime header CTA — the app's accent button pairing (#BFFF47 on #233600) */
@@ -200,7 +185,7 @@ img, svg, canvas { display: block; }
   white-space: nowrap;
 }
 @media (hover: hover) and (pointer: fine) {
-  .nav__cta:hover { box-shadow: 0 0 26px rgba(191,255,71,.5); }
+  .nav__cta:hover { box-shadow: 0 0 26px rgba(191,255,71,.5); transform: translateY(-1px); }
 }
 .nav__cta:active { transform: scale(0.97); }
 @media (prefers-reduced-motion: reduce) { .nav__line { transform: scaleX(1); transition: opacity .5s var(--ease); } }
@@ -220,16 +205,19 @@ img, svg, canvas { display: block; }
 
 /* Scroll-reveal headline — each word fades from dim → full opacity as it scrolls through */
 .r-scroll { color: var(--ink-display); }
-.r-scroll .word { display: inline-block; color: rgba(230,235,241,0.15); will-change: color; }
+/* No will-change: color — colour isn't a compositable property, so it only
+   forced a wasteful layer on every reveal word (dozens across the page). */
+.r-scroll .word { display: inline-block; color: rgba(230,235,241,0.15); }
 
 /* ─────────────────────────────────────
    TYPOGRAPHY HELPERS
 ───────────────────────────────────── */
-.kicker { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; background: linear-gradient(90deg, var(--lime), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-/* Single source of truth for the pulsing dot on every kicker. */
+.kicker { font-size: clamp(14px, 1.45vw, 21px); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 12px; margin-bottom: clamp(20px, 1.8vw, 28px); background: linear-gradient(90deg, var(--lime), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+/* Single source of truth for the pulsing dot on every kicker. Sized to track the
+   ~2× larger kicker text so the dot stays visually proportional. */
 .kicker::before, .problem__kicker::before {
   content: "";
-  width: 6px; height: 6px;
+  width: 8px; height: 8px;
   border-radius: 50%;
   background: var(--lime);
   display: inline-block;
@@ -309,16 +297,15 @@ img, svg, canvas { display: block; }
    PROBLEM STATEMENT
 ───────────────────────────────────── */
 
-/* Override the default 16% gradient — stretch it across the full
-   section so the colour shift from hero (#141414) to numbers
-   (#0d1824) is a slow, cinematic fade rather than an abrupt cut */
+/* Hold the hero's #141414 steady through the whole problem section — no
+   scroll-driven colour shift, for a calmer, more premium read */
 #problem {
-  background: linear-gradient(180deg, #141414 0%, #0d1824 100%);
+  background: #141414;
 }
-/* Same treatment for numbers: a full-height slow fade (#0d1824 → #0a0e0c)
-   instead of the default 16% drop, so problem flows seamlessly into it */
+/* Constant #141414 — the same tone as the hero and problem sections, held
+   steady from here through the rest of the page for one continuous surface */
 #numbers {
-  background: linear-gradient(180deg, #0d1824 0%, #0a0e0c 100%);
+  background: #141414;
 }
 
 .problem {
@@ -513,8 +500,8 @@ img, svg, canvas { display: block; }
   text-align: center;
 }
 .problem__kicker {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: clamp(14px, 1.45vw, 21px);
+  font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
   background: linear-gradient(90deg, var(--lime), var(--cyan));
@@ -600,7 +587,7 @@ img, svg, canvas { display: block; }
 /* hero device cluster — layered tilted phones, mouse parallax + float */
 .hero__devices { position: absolute; top: 0; right: 0; width: 50%; height: 100%; perspective: 1400px; pointer-events: none; z-index: 2; }
 .hero__devices-glow { position: absolute; top: 50%; left: 48%; width: 62%; aspect-ratio: 1; transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(191, 255, 71, .13), rgba(191, 255, 71, 0) 65%); filter: blur(44px); z-index: 0; }
-.hero__phone { position: absolute; width: auto; backface-visibility: hidden; will-change: transform; filter: drop-shadow(0 38px 70px rgba(0, 0, 0, .55)); }
+.hero__phone { position: absolute; width: auto; backface-visibility: hidden; will-change: transform; filter: drop-shadow(0 12px 16px rgba(0,0,0,.42)); }
 .hero__phone--front { left: 36%; top: 55%; height: 72vh; max-height: 702px; z-index: 2; transform: translate(-50%, -50%) rotate(-3deg); }
 .hero__phone--back  { left: 71%; top: 52%; height: 72vh; max-height: 702px; z-index: 1; opacity: .9; transform: translate(-50%, -50%) rotate(6deg); }
 @media (max-width: 1100px) { .hero__phone--front { height: 59vh; left: 38%; } .hero__phone--back { height: 59vh; left: 71%; top: 52%; } }
@@ -610,18 +597,6 @@ img, svg, canvas { display: block; }
    SECTION 1 — NUMBERS
 ───────────────────────────────────── */
 .numbers { padding: 0; position: relative; overflow: hidden; }
-.numbers::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  /* Soft on-brand depth: a cool wash top-left + a low lime bloom behind the
-     life-grid. Replaces the old app-icon ghost grid — gives ambience, no noise */
-  background:
-    radial-gradient(50% 36% at 12% 16%, rgba(191,255,71,.055) 0%, transparent 70%),
-    radial-gradient(60% 45% at 60% 30%, rgba(90,200,250,.04) 0%, transparent 72%);
-  pointer-events: none;
-  z-index: 0;
-}
 
 .numbers__noise { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 .numbers__wrap {
@@ -806,7 +781,7 @@ img, svg, canvas { display: block; }
 /* ─────────────────────────────────────
    SECTION 2 — BLOCKING
 ───────────────────────────────────── */
-.block { padding: 0; background: linear-gradient(180deg, #0a0e0c 0%, #0d1824 35%, #0d1824 100%); }
+.block { padding: 0; background: #141414; }
 .block__grid { padding-block: clamp(110px, 15vw, 200px); align-items: start; }
 .block__copy { grid-column: 1 / span 4; }
 .block__mockup-wrap { grid-column: 5 / -1; }
@@ -836,8 +811,8 @@ img, svg, canvas { display: block; }
   /* box-shadow (not filter:drop-shadow) avoids re-rasterising the shadow from the
      iframe's animating content every frame. */
   box-shadow:
-    0 56px 96px rgba(0,0,0,.8),
-    0 16px 32px rgba(0,0,0,.55);
+    0 10px 18px rgba(0,0,0,.5),
+    0 3px 5px rgba(0,0,0,.28);
 }
 .safari-svg {
   position: absolute;
@@ -861,29 +836,49 @@ img, svg, canvas { display: block; }
   margin-top: clamp(32px, 5vw, 72px);
 }
 
-/* iPhone photo overlay — full upright product shot standing in front of the Safari window's
-   bottom-right corner. Shown complete (no fade/blur); a soft drop-shadow lifts it off the page. */
-.iphone-photo {
+/* iPhone — real phone PNG with live video overlaid on the screen area.
+   Wrapper owns position/size/shadow; img + video stack inside it. */
+.device-phone-wrap {
   position: absolute;
-  width: 29%;
-  left: -5%;
-  bottom: -7%;
+  left: -1.5%;
+  bottom: -8%;
+  width: 24%;
+  z-index: 2;
+  pointer-events: none;
 }
-.iphone-photo__img {
+.device-phone-img {
+  display: block;
   width: 100%;
   height: auto;
-  display: block;
+  position: relative;
+  z-index: 2;
   filter:
-    drop-shadow(0 34px 58px rgba(0,0,0,.8))
-    drop-shadow(0 12px 24px rgba(0,0,0,.5));
+    drop-shadow(0 8px 12px rgba(0,0,0,.48))
+    drop-shadow(0 2px 4px rgba(0,0,0,.28));
 }
+/* Video sits above the PNG (z-index 3 > img z-index 2) inside the bezel.
+   Slightly inset from raw screen edges so bezel reads cleanly around it.
+   Border simulates the recessed screen lip. */
+.device-phone-video {
+  position: absolute;
+  left: 9%;
+  top: 4.6%;
+  width: 82%;
+  height: 90.5%;
+  object-fit: cover;
+  border-radius: 11% / 5.1%;
+  border: 1.5px solid rgba(0,0,0,0.8);
+  z-index: 3;
+  display: block;
+}
+
 
 /* responsive */
 @media (max-width: 860px) {
   .block__grid { grid-template-columns: 1fr; }
   .block__copy, .block__mockup-wrap { grid-column: 1; }
   .mockup-combo  { max-width: 100%; }
-  .iphone-photo  { width: 26%; left: -3%; bottom: -4%; }
+  .device-phone-wrap { width: 30%; left: 0%; bottom: -6%; }
 }
 
 /* ─────────────────────────────────────
@@ -891,24 +886,23 @@ img, svg, canvas { display: block; }
 ───────────────────────────────────── */
 .af { padding: 0; position: relative; }
 
-/* ambient particle field — fills the section, sits behind the copy */
+/* ambient particle field — fills the section, sits behind the copy.
+   No edge mask: the baked glow wash already falls radially to transparent and
+   the section bg is the same #141414 as its neighbours, so the field dissolves
+   on its own. (The old mask-image linear edge-fades added an 8-bit ramp that
+   itself banded on 4K — the very "ripple lines" we're killing here.) */
 .af__canvas {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   z-index: 0; display: block; pointer-events: none;
 }
-/* soft vignette frames the ambience and seams into the neighbouring sections */
-.af::after {
-  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(130% 90% at 50% 48%, transparent 52%, rgba(8,11,9,.55) 100%),
-    linear-gradient(180deg, #0a0e0c 0%, transparent 22%, transparent 58%, #0a0e0c 100%);
-}
-/* film grain — filmic texture over the field, below the copy. Kills gradient
-   banding and adds a premium, tactile finish. */
+/* film grain — filmic texture over the field, below the copy. This is the
+   dither that breaks any residual 8-bit step in the (now faint) glow, and adds
+   a premium, tactile finish. No mask: full-bleed noise over a flat #141414
+   neighbour has no seam to hide. */
 .af__grain {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  opacity: .07; mix-blend-mode: soft-light;
+  opacity: .10; mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
   /* static — a moving background-position repaints this soft-light layer
@@ -934,7 +928,7 @@ img, svg, canvas { display: block; }
   font-size: clamp(30px, 4.4vw, 58px);
   font-weight: 900; letter-spacing: -.03em; line-height: 1.05;
   color: var(--ink-display); margin: 0 0 18px;
-  text-shadow: 0 2px 40px rgba(0,0,0,.45);
+  text-shadow: 0 2px 16px rgba(0,0,0,.45);
 }
 .af__title .word { display: inline-block; will-change: transform, opacity; }
 /* the lime accent word carries a slow, subtle sheen — signals "this is alive" */
@@ -957,7 +951,7 @@ img, svg, canvas { display: block; }
 .af__line {
   font-size: clamp(18px, 2.1vw, 27px); color: rgba(255,255,255,.82);
   font-weight: 500; line-height: 1.45; letter-spacing: -.01em; max-width: 42ch;
-  text-shadow: 0 1px 24px rgba(0,0,0,.5);
+  text-shadow: 0 1px 12px rgba(0,0,0,.5);
 }
 
 /* ── feature row — hover (or tap) selects ── */
@@ -987,7 +981,7 @@ img, svg, canvas { display: block; }
   transition: color .45s var(--ease), border-color .45s var(--ease),
               background .45s var(--ease);
 }
-.af__icon svg { width: 46%; height: 46%; will-change: transform; }
+.af__icon svg { width: 46%; height: 46%; }
 .af__icon:hover { color: rgba(255,255,255,.72); }
 .af__icon.is-active {
   color: var(--ac, #BFFF47);
@@ -1359,7 +1353,11 @@ img, svg, canvas { display: block; }
   width: 100%; height: 100%;
   object-fit: cover;
   display: block;
-  filter: saturate(0.4) brightness(0.6) blur(0.6px);
+  /* No blur() — a sub-pixel blur forced every one of the ~30 tiles onto its own
+     re-rasterising GPU layer, and the scroll scrub rewrites them each frame.
+     That compositing load was the modes-section flicker. saturate/brightness
+     are cheap colour matrices and stay. */
+  filter: saturate(0.4) brightness(0.6);
   transition: filter .45s ease;
 }
 /* Poster-style gradient scrim — legibility behind title */
@@ -1446,16 +1444,10 @@ img, svg, canvas { display: block; }
    SECTION 4 — JOURNEY
 ───────────────────────────────────── */
 /* ── Journey — horizontal card strip ───────────────────── */
-/* "One Identity" shares the Habits section's deep, premium tone instead of the
-   old lighter #13212f wash that flattened the cards. A soft blue lift settles
-   into deep ink (#0a0e0c, the Habits body colour) so the identity cards and copy
-   feel alive against the dark, with a gentle central glow behind the strip. Entry
-   stays seamless from Modes (both #0a0e0c at the seam); the alternating light/dark
-   cadence is intentionally broken through this run. */
+/* Constant #141414 — same as every other section — so journey reads as part
+   of the one continuous surface that runs the whole page */
 #journey {
-  background:
-    radial-gradient(115% 78% at 50% 42%, rgba(30, 54, 80, .30), rgba(10, 14, 12, 0) 62%),
-    linear-gradient(180deg, #0a0e0c 0%, #0c131b 48%, #0a0e0c 100%);
+  background: #141414;
 }
 .journey { padding: 0; }
 
@@ -1479,6 +1471,20 @@ img, svg, canvas { display: block; }
 }
 .journey__head { grid-column: 1 / -1; text-align: center; }
 .journey__head .hed { margin-bottom: 0; }
+/* Lime accents carry the same slow sheen as the "attention" word in the
+   overview headline — a moving gradient clipped to the text. The scroll
+   reveal fades these in via opacity (see setupScrollHeadlines), so the
+   gradient fill is preserved. */
+.journey__head .hed .lime {
+  background: linear-gradient(100deg, var(--lime) 32%, var(--lime-2) 50%, var(--lime) 68%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: af-shimmer 4.5s var(--ease) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey__head .hed .lime { animation: none; }
+}
 
 /* Paragraph below the strip — revealed by GSAP with the cards */
 .journey__foot {
@@ -1529,38 +1535,34 @@ img, svg, canvas { display: block; }
   position: relative;
 }
 
-/* "Drag to explore" hint pill — fades in when pin releases, dismisses on first drag */
-.journey__drag-hint {
+/* Horizontal-scroll affordance — a slim progress rail beneath the cards.
+   Reads as a refined custom scrollbar: the thumb's width is the fraction of the
+   strip currently on screen and its position is how far you've travelled — so it
+   tells the user the cards move sideways, with no pills or arrows. Fades in once
+   the pin releases (cards become draggable) and tracks drag/inertia live. */
+.journey__rail {
   position: absolute;
   bottom: clamp(14px, 2.5vh, 22px);
   left: 50%;
   transform: translateX(-50%);
-  opacity: 0;          /* GSAP reveals it after pin releases */
+  width: clamp(120px, 15vw, 200px);
+  height: 4px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+  opacity: 0;          /* GSAP reveals it after the pin releases */
   pointer-events: none;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 16px;
-  border-radius: 100px;
-  background: rgba(8, 13, 6, 0.82);
-  border: 1px solid rgba(191, 255, 71, 0.16);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  color: rgba(191, 255, 71, 0.60);
-  white-space: nowrap;
-  user-select: none;
-  -webkit-user-select: none;
 }
-.journey__drag-hint-arrow {
-  display: inline-block;
-  font-size: 13px;
-  color: rgba(191, 255, 71, 0.82);
-  will-change: transform;
+.journey__rail-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 30%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, rgba(191, 255, 71, 0.5), var(--lime));
+  box-shadow: 0 0 10px rgba(191, 255, 71, 0.35);
 }
 
 /* Card renders at natural 260×321; transform shrinks it to fit the item wrapper */
@@ -1580,15 +1582,17 @@ img, svg, canvas { display: block; }
   border-radius: var(--card-radius);
   position: relative;
   cursor: pointer;
-  /* Dormant state — desaturated + dimmed at rest; filter lives here (NOT on body/tilt)
-     because filter + transform-style: preserve-3d on the same element flattens 3D,
-     breaking backface-visibility. Applying on icard (no preserve-3d) keeps the 3D chain intact. */
-  filter: saturate(0.75) brightness(0.85);
+  /* Resting state — the palettes are already pastel, so the old saturate(0.75)
+     brightness(0.85) greyed them out. Rest near full richness; hover lifts further.
+     Filter lives here (NOT on body/tilt) because filter + transform-style:
+     preserve-3d on the same element flattens 3D, breaking backface-visibility.
+     Applying on icard (no preserve-3d) keeps the 3D chain intact. */
+  filter: saturate(1.12) brightness(0.99);
   transition: filter 0.38s ease;
 }
 .icard.is-hovered,
 .icard.is-flipped {
-  filter: saturate(1) brightness(1);
+  filter: saturate(1.28) brightness(1.06);
 }
 
 /* JS tilt layer — thin wrapper between the icard shell and body.
@@ -1879,10 +1883,11 @@ img, svg, canvas { display: block; }
 .get { padding: clamp(110px, 15vw, 200px) var(--pad); text-align: center; }
 .get__inner { max-width: 760px; margin: 0 auto; }
 .get__title { margin: 0 auto 20px; }
-.get__sub { font-size: 16px; color: var(--ink-2); line-height: 1.6; max-width: 460px; margin: 0 auto 40px; }
+/* One flowing sentence with a · separator. Wide enough to sit on a single line
+   on desktop; the clamp + natural wrapping keep it responsive on narrow screens. */
+.get__sub { font-size: clamp(14px, 1.5vw, 15px); color: var(--ink-2); line-height: 1.6; max-width: 740px; margin: 0 auto 40px; text-wrap: balance; }
 .get__stores { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-bottom: 10px; }
 .store-btn.is-soon { opacity: .4; cursor: default; pointer-events: none; }
-.get__fine { margin-top: 22px; font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
 
 /* ─────────────────────────────────────
    FOOTER

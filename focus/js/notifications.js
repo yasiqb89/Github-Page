@@ -49,7 +49,7 @@ const APPS = [
   { name: 'Snapchat',   color: '#ffcc00', slug: 'snapchat', dark: true },
   { name: 'WhatsApp',   color: '#25d366', slug: 'whatsapp' },
   { name: 'X',          color: '#000000', slug: 'x',        border: true },
-  { name: 'LinkedIn',   color: '#0a66c2', slug: 'linkedin' },
+  { name: 'Twitch',     color: '#9146ff', slug: 'twitch' },
   { name: 'Discord',    color: '#5865f2', slug: 'discord' },
   { name: 'Facebook',   color: '#1877f2', slug: 'facebook' },
 ];
@@ -62,7 +62,7 @@ const PREVIEWS = [
   ['You have a new snap — open it',        'now'],
   ['12 unread messages in Family',         '4m' ],
   ['47 new notifications',                 '6m' ],
-  ['Someone viewed your profile',          '8m' ],
+  ['A channel you follow is live',         '8m' ],
   ['156 unread in #general',               '9m' ],
   ['Jamie reacted to your post',           '11m'],
 ];
