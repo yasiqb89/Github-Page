@@ -603,179 +603,146 @@ img, svg, canvas { display: block; }
   position: relative; z-index: 1;
   max-width: min(100%, 1180px);
   margin: 0 auto;
-  padding: clamp(56px, 7vw, 100px) var(--pad) clamp(56px, 7vw, 100px);
+  padding: clamp(64px, 9vw, 130px) var(--pad);
 }
 
-.numbers__header { margin-bottom: clamp(28px, 3vw, 44px); }
-.numbers__hed {
-  font-size: clamp(28px, 3.6vw, 50px);
+/* ─── The Reckoning ─── */
+.rk {
+  max-width: min(100%, 1000px);
+  /* One vertical rhythm for the whole block: every gap is one of these two
+     tokens, so the section sits on a grid instead of ad-hoc per-element margins. */
+  --rk-flow: clamp(26px, 3.2vw, 38px);  /* standard gap between blocks */
+  --rk-tight: clamp(8px, 1vw, 12px);    /* coupled pairs (eyebrow, bar + labels) */
+}
+.rk .kicker { margin: 0 0 var(--rk-tight); }
+
+.rk__q {
+  font-size: min(24px, 3.1vw);
+  font-weight: 500;
+  color: var(--ink-2);
+  line-height: 1.32;
+  letter-spacing: -.012em;
+  white-space: nowrap;
+  margin: 0 0 var(--rk-flow);
+}
+
+/* Choice row (the interaction) */
+.rk__choices {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(22px, 4.4vw, 48px);
+  margin: 0 0 var(--rk-flow);
+}
+.rk__chip {
+  appearance: none; -webkit-appearance: none;
+  background: none; border: 0;
+  padding: 2px 0 14px;
+  font: inherit;
+  font-size: clamp(20px, 3.45vw, 33px);
   font-weight: 800;
   letter-spacing: -.035em;
-  line-height: 1.1;
-  color: var(--ink-display);
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Year grid ── */
-.numbers__grid-wrap { margin-bottom: clamp(24px, 2.8vw, 40px); }
-.numbers__grid {
-  display: grid;
-  grid-template-columns: repeat(52, 1fr);
-  grid-template-rows: repeat(7, 1fr);
-  gap: clamp(2px, 0.34vw, 4px);
-  width: 100%;
-  aspect-ratio: 52 / 7;
-  margin-bottom: 14px;
-  user-select: none;
-}
-
-.numbers__grid-cell {
-  border-radius: clamp(1px, 0.18vw, 2px);
-  background: rgba(255,255,255,.045);
-  opacity: 0;
-  transition: background-color .38s var(--ease), box-shadow .38s var(--ease);
-  will-change: background-color;
-}
-.numbers__grid-cell.is-lost    { background: rgba(94,106,120,.45); }
-.numbers__grid-cell.is-reclaim { background: var(--lime); box-shadow: 0 0 5px rgba(191,255,71,.4); }
-
-/* Legend */
-.numbers__legend {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-.numbers__legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .09em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.numbers__legend-item::before {
-  content: '';
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-.numbers__legend-item--empty::before   { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.12); }
-.numbers__legend-item--lost::before    { background: rgba(94,106,120,.45); }
-.numbers__legend-item--reclaim::before { background: var(--lime); }
-
-/* Moments grid — 4 stat cards */
-/* ── Footer: single centred column ── */
-.numbers__footer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(20px, 2.5vw, 32px);
-}
-
-/* Moments — horizontal row of 4 */
-.numbers__moments-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: clamp(16px, 2.5vw, 32px);
-  width: 100%;
-  max-width: 720px;
-}
-.numbers__moment {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.numbers__moment-n {
-  font-size: clamp(14px, 1.7vw, 23px);
-  font-weight: 800;
-  letter-spacing: -.04em;
   line-height: 1;
-  font-variant-numeric: tabular-nums;
-  display: inline-block;
-  min-width: 2ch;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color .26s var(--ease), transform .14s var(--ease);
 }
-.numbers__moment-lbl {
-  font-size: clamp(9px, 0.7vw, 10px);
-  color: var(--ink-2);
+@media (hover: hover) { .rk__chip:hover { color: var(--ink-2); } }
+.rk__chip[aria-checked="true"] { color: var(--ink-display); }
+.rk__chip:active { transform: scale(.95); }
+.rk__chip:focus-visible { outline: 2px solid var(--lime); outline-offset: 5px; border-radius: 5px; }
+.rk__underline {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px; width: 0;
+  background: var(--lime);
+  transform: translateX(0);
+  transition: transform .4s var(--ease), width .4s var(--ease);
+}
+
+/* The verdict */
+.rk__verdict { margin: 0 0 var(--rk-flow); }
+.rk__verdict-line {
+  font-size: clamp(22px, 3.4vw, 38px);
   font-weight: 500;
-  letter-spacing: .02em;
-  text-transform: uppercase;
-  line-height: 1.35;
+  color: var(--ink-2);
+  letter-spacing: -.022em;
+  line-height: 1.14;
+  margin: 0;
+  text-wrap: balance;
 }
-
-/* Slider control */
-.numbers__control {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  max-width: 520px;
-}
-.numbers__control-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.numbers__control-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.numbers__control-val {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--lime);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Centred stat + sub */
-.numbers__bottom {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(10px, 1.2vw, 16px);
-  text-align: center;
-  max-width: 52ch;
-}
-.numbers__turn-stat {
-  font-size: clamp(24px, 3.2vw, 44px);
+.rk__num {
   font-weight: 800;
-  letter-spacing: -.038em;
-  line-height: 1.15;
-  color: var(--ink-display);
-  margin: 0;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  transition: filter .22s ease;
 }
-.numbers__turn-stat strong {
-  display: inline-block;
-  min-width: 2ch;
-  text-align: right;
+.rk__num.is-rolling { filter: blur(4px); }
+.rk__gone {
+  font-size: clamp(51px, 12vw, 122px);
+  font-weight: 800;
+  color: var(--ink-display);
+  letter-spacing: -.046em;
+  line-height: .9;
+  margin: 4px 0 0;
 }
-.numbers__sub {
-  font-size: clamp(13px, 1.35vw, 16px);
+.rk__verdict-line .rk__num { font-variant-numeric: tabular-nums; }
+
+/* The year-bar (the only graphic) */
+.rk__bar {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.06);
+  overflow: hidden;
+  margin: 0 0 var(--rk-tight);
+}
+.rk__bar-spent {
+  position: absolute; top: 0; left: 0; height: 100%;
+  width: 0;
+  background: rgba(94,106,120,.55);
+  transition: width .62s var(--ease);
+}
+.rk__bar-reclaim {
+  position: absolute; top: 0; left: 0; height: 100%;
+  width: 0; opacity: 0;
+  background: var(--lime);
+  transition: width .62s var(--ease), left .62s var(--ease), opacity .3s ease .5s;
+}
+.rk__ends {
+  display: flex; justify-content: space-between;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
   color: var(--ink-3);
-  line-height: 1.7;
-  font-weight: 400;
-  margin: 0;
+  margin: 0 0 var(--rk-flow);
 }
 
-/* Slider */
-.slider { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--lime) 0%, var(--lime) var(--fill,40%), rgba(255,255,255,.1) var(--fill,40%)); cursor: pointer; outline: none; }
-.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--lime); border: 3px solid #0a0e0c; box-shadow: 0 0 0 1px var(--lime), 0 0 18px rgba(191,255,71,.55); cursor: grab; transition: transform .15s var(--ease); }
-.slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.15); }
-.slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--lime); border: 3px solid #0a0e0c; box-shadow: 0 0 0 1px var(--lime), 0 0 18px rgba(191,255,71,.55); cursor: grab; }
-
+/* What the reclaimed time buys (centred focal payoff), then the closing line */
+.rk__moments {
+  font-size: clamp(14px, 1.5vw, 17px);
+  color: var(--ink-2);
+  line-height: 1.6;
+  font-weight: 400;
+  text-align: center;
+  margin: 0 0 var(--rk-flow);
+}
+.rk__moments .lime { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rk__turn {
+  font-size: clamp(14px, 1.6vw, 18px);
+  font-weight: 500;
+  color: var(--ink-2);
+  letter-spacing: -.012em;
+  line-height: 1.6;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.rk__arrow { color: var(--lime); flex-shrink: 0; }
 
 /* Mobile */
 @media (max-width: 820px) {
-  .numbers__hed { font-size: clamp(32px, 9vw, 50px); }
+  .rk__choices { gap: 26px 30px; }
 }
 
 /* ─────────────────────────────────────

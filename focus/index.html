@@ -110,58 +110,34 @@
 ════════════════════════════════════════ -->
 <section class="s s--blk numbers" id="numbers" style="--from:#141414;--to:#141414">
   <div class="numbers__noise" aria-hidden="true"></div>
-  <div class="numbers__wrap">
+  <div class="numbers__wrap rk">
 
-    <header class="numbers__header">
-      <p class="kicker r-up">The cost</p>
-      <h2 class="numbers__hed r-scroll" data-scroll-reveal>
-        On average, <span class="lime" data-days-lost>106</span> days a year<br>go to the scroll.
-      </h2>
-    </header>
+    <p class="kicker r-up">The cost</p>
+    <p class="rk__q reveal">How much of your day disappears into the screen?</p>
 
-    <!-- 364-day year grid: 52 weeks × 7 days -->
-    <div class="numbers__grid-wrap reveal">
-      <div class="numbers__grid" id="lifeGrid" role="img" aria-label="Year grid showing days lost to screen time"></div>
-      <div class="numbers__legend" aria-hidden="true">
-        <span class="numbers__legend-item numbers__legend-item--empty">Your year</span>
-        <span class="numbers__legend-item numbers__legend-item--lost">Screen time</span>
-        <span class="numbers__legend-item numbers__legend-item--reclaim">Focus gives back</span>
-      </div>
+    <!-- A choice, not a slider: tapping recomputes the verdict below -->
+    <div class="rk__choices reveal" role="radiogroup" aria-label="Average daily screen time">
+      <button class="rk__chip" type="button" role="radio" aria-checked="false" data-h="2">2h</button>
+      <button class="rk__chip" type="button" role="radio" aria-checked="false" data-h="4">4h</button>
+      <button class="rk__chip" type="button" role="radio" aria-checked="true"  data-h="6">6h</button>
+      <button class="rk__chip" type="button" role="radio" aria-checked="false" data-h="8">8h+</button>
+      <span class="rk__underline" aria-hidden="true"></span>
     </div>
 
-    <div class="numbers__footer">
-      <div class="numbers__moments-grid reveal">
-        <div class="numbers__moment">
-          <span class="numbers__moment-n lime" data-moment="0">15</span>
-          <span class="numbers__moment-lbl">Family evenings</span>
-        </div>
-        <div class="numbers__moment">
-          <span class="numbers__moment-n lime" data-moment="1">10</span>
-          <span class="numbers__moment-lbl">Focused work sessions</span>
-        </div>
-        <div class="numbers__moment">
-          <span class="numbers__moment-n lime" data-moment="2">6</span>
-          <span class="numbers__moment-lbl">Uninterrupted gym workouts</span>
-        </div>
-        <div class="numbers__moment">
-          <span class="numbers__moment-n lime" data-moment="3">4</span>
-          <span class="numbers__moment-lbl">Recovery nights</span>
-        </div>
-      </div>
-      <div class="numbers__control reveal">
-        <div class="numbers__control-row">
-          <span class="numbers__control-label">Your daily screen time</span>
-          <span class="numbers__control-val"><span data-screen>7</span>h</span>
-        </div>
-        <input type="range" id="screenSlider" class="slider"
-          min="2" max="12" step="0.5" value="7"
-          aria-label="Average daily screen time in hours"/>
-      </div>
-      <div class="numbers__bottom">
-        <p class="numbers__turn-stat r-scroll" data-scroll-reveal data-sr-trigger="#numbers .numbers__hed">Focus gives <strong class="lime" data-days-reclaim>35</strong> days back.</p>
-        <p class="numbers__sub reveal">Focus turns protected minutes into the moments they were meant for — better habits, less distraction, space for what matters.</p>
-      </div>
+    <div class="rk__verdict reveal">
+      <p class="rk__verdict-line">That's <span class="rk__num lime" data-days-lost>91</span> days a year · <span class="rk__num lime" data-hours-month>183</span> hours a month.</p>
+      <p class="rk__gone">Lost.</p>
     </div>
+
+    <!-- One visual: a year drained, the reclaimed slice lit lime -->
+    <div class="rk__bar reveal" role="img" data-rk-bar aria-label="A year drained by screen time">
+      <span class="rk__bar-spent" data-rk-spent></span>
+      <span class="rk__bar-reclaim" data-rk-reclaim></span>
+    </div>
+    <div class="rk__ends reveal" aria-hidden="true"><span>now</span><span>one year</span></div>
+
+    <p class="rk__moments reveal" data-rk-moments>Enough for <span class="lime">15</span> family dinners, <span class="lime">8</span> gym sessions, or <span class="lime">10</span> days of deep work.</p>
+    <p class="rk__turn reveal"><span class="rk__arrow" aria-hidden="true">→</span> Focus turns protected minutes into the moments they were meant for — better habits, less distraction, space for what matters.</p>
 
   </div><!-- /.numbers__wrap -->
 </section>
