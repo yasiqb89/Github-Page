@@ -130,7 +130,7 @@ function setupProblemReveal() {
     if (w.querySelector('.lime')) {
       w.querySelector('.lime').style.color = `rgba(191,255,71,${alpha})`;
     } else {
-      w.style.color = `rgba(255,255,255,${alpha})`;
+      w.style.color = `rgba(230,235,241,${alpha})`;
     }
   };
 
@@ -245,7 +245,7 @@ function setupReveals() {
 function setupScrollHeadlines() {
   document.querySelectorAll('[data-scroll-reveal]').forEach((el) => {
     const words = splitWords(el);
-    if (reduced) { words.forEach((w) => { w.style.color = 'rgba(255,255,255,1)'; if (w.querySelector('.lime')) w.querySelector('.lime').style.color = 'rgba(191,255,71,1)'; }); return; }
+    if (reduced) { words.forEach((w) => { w.style.color = 'rgba(230,235,241,1)'; if (w.querySelector('.lime')) w.querySelector('.lime').style.color = 'rgba(191,255,71,1)'; }); return; }
 
     // Optional: drive this element's fill off another element's scroll position
     // (data-sr-trigger) so two headlines reveal in sync — e.g. the cost-section
@@ -267,7 +267,7 @@ function setupScrollHeadlines() {
           if (w.querySelector('.lime')) {
             w.querySelector('.lime').style.color = `rgba(191,255,71,${a})`;
           } else {
-            w.style.color = `rgba(255,255,255,${a})`;
+            w.style.color = `rgba(230,235,241,${a})`;
           }
         });
       },

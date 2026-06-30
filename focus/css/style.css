@@ -9,6 +9,7 @@
   --cyan:   #5AC8FA;
 
   --ink:    rgba(255,255,255,0.96);
+  --ink-display: #E6EBF1;   /* cool porcelain — large display headings only */
   --ink-2:  rgba(255,255,255,0.60);
   --ink-3:  rgba(255,255,255,0.32);
   --line:   rgba(255,255,255,0.08);
@@ -218,8 +219,8 @@ img, svg, canvas { display: block; }
 .reveal-children.is-in > *:nth-child(3) { transition: opacity .7s .2s var(--ease), transform .7s .2s var(--ease); }
 
 /* Scroll-reveal headline — each word fades from dim → full opacity as it scrolls through */
-.r-scroll { color: var(--ink); }
-.r-scroll .word { display: inline-block; color: rgba(255,255,255,0.15); will-change: color; }
+.r-scroll { color: var(--ink-display); }
+.r-scroll .word { display: inline-block; color: rgba(230,235,241,0.15); will-change: color; }
 
 /* ─────────────────────────────────────
    TYPOGRAPHY HELPERS
@@ -240,6 +241,7 @@ img, svg, canvas { display: block; }
 .hed {
   font-size: clamp(40px, 6vw, 84px);
   font-weight: 900; line-height: 1.02; letter-spacing: -.04em;
+  color: var(--ink-display);
 }
 
 /* ─────────────────────────────────────
@@ -531,7 +533,7 @@ img, svg, canvas { display: block; }
   font-weight: 900;
   line-height: 1.04;
   letter-spacing: -.04em;
-  color: var(--ink);
+  color: var(--ink-display);
 }
 .problem__line + .problem__line { margin-top: 0.12em; }
 
@@ -586,7 +588,7 @@ img, svg, canvas { display: block; }
 .hero__layout { position: relative; z-index: 1; min-height: 100svh; display: flex; align-items: center; }
 .hero__inner { grid-column: 1 / span 7; padding-top: 120px; padding-bottom: 100px; }
 .hero__eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
-.hero__title { font-size: clamp(52px, 9.8vw, 125px); font-weight: 900; line-height: .96; letter-spacing: -.045em; margin-bottom: 28px; }
+.hero__title { font-size: clamp(52px, 9.8vw, 125px); font-weight: 900; line-height: .96; letter-spacing: -.045em; margin-bottom: 28px; color: var(--ink-display); }
 .h-line-wrap { display: block; overflow: hidden; padding-right: 0.06em; }
 .h-line { display: block; }
 .hero__title .word { display: inline-block; will-change: transform; }
@@ -635,7 +637,7 @@ img, svg, canvas { display: block; }
   font-weight: 800;
   letter-spacing: -.035em;
   line-height: 1.1;
-  color: var(--ink);
+  color: var(--ink-display);
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -772,7 +774,7 @@ img, svg, canvas { display: block; }
   font-weight: 800;
   letter-spacing: -.038em;
   line-height: 1.15;
-  color: var(--ink);
+  color: var(--ink-display);
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -809,7 +811,7 @@ img, svg, canvas { display: block; }
 .block__copy { grid-column: 1 / span 4; }
 .block__mockup-wrap { grid-column: 5 / -1; }
 .block .hed { margin-bottom: 36px; line-height: 1.0; }
-.pullquote { font-size: clamp(16px, 1.8vw, 22px); line-height: 1.5; font-weight: 500; color: var(--ink-2); letter-spacing: -.01em; position: relative; padding-left: 20px; border-left: 2px solid rgba(191,255,71,.4); font-style: italic; }
+.pullquote { font-size: clamp(16px, 1.8vw, 22px); line-height: 1.6; font-weight: 500; color: var(--ink-2); letter-spacing: -.01em; max-width: 34ch; }
 
 /* ── mockup combo (Safari + iPhone overlay) ── */
 .block__mockup { display: flex; justify-content: flex-start; align-items: flex-start; }
@@ -931,7 +933,7 @@ img, svg, canvas { display: block; }
 .af__title {
   font-size: clamp(30px, 4.4vw, 58px);
   font-weight: 900; letter-spacing: -.03em; line-height: 1.05;
-  color: #fff; margin: 0 0 18px;
+  color: var(--ink-display); margin: 0 0 18px;
   text-shadow: 0 2px 40px rgba(0,0,0,.45);
 }
 .af__title .word { display: inline-block; will-change: transform, opacity; }
