@@ -272,7 +272,6 @@ function setupSlider() {
   if (!slider) return;
   const elScreen  = document.querySelector('[data-screen]');
   const elLost    = document.querySelector('[data-days-lost]');
-  const elReclaim = document.querySelector('[data-days-reclaim]');
   const boxes     = [...document.querySelectorAll('.numbers__month')];
   const mlabels   = [...document.querySelectorAll('.numbers__mlabel')];
   const momEl     = document.querySelector('[data-moments]');
@@ -287,10 +286,8 @@ function setupSlider() {
     const pct     = ((h - +slider.min) / (+slider.max - +slider.min)) * 100;
     slider.style.setProperty('--fill', `${pct}%`);
     if (elScreen) elScreen.textContent = fmtH(h);
-    const lost    = Math.round((h * 365) / 24);
-    const reclaim = Math.round(lost * 0.33);
-    if (elLost)    elLost.textContent    = lost;
-    if (elReclaim) elReclaim.textContent = reclaim;
+    const lost = Math.round((h * 365) / 24);
+    if (elLost) elLost.textContent = lost;
 
     // The year, by the month: each box fills with the time the screen takes —
     // whole months fill solid, the current month fills part-way (days-accurate).
@@ -301,10 +298,18 @@ function setupSlider() {
       box.style.setProperty('--fill', frac.toFixed(4));
     });
     mlabels.forEach((l, i) => l.classList.toggle('is-on', i < months));
-    if (momEl) momEl.innerHTML =
-      `Enough for <span class="lime">${Math.round(reclaim / 2)}</span> family dinners, ` +
-      `<span class="lime">${Math.round(reclaim / 4)}</span> gym sessions, or ` +
-      `<span class="lime">${Math.round(reclaim / 3)}</span> days of deep work.`;
+
+    // Break the whole year's loss into moments that add up to the total: the
+    // three counts sum to `lost` (deep work takes the remainder).
+    if (momEl) {
+      const dinners = Math.round(lost * 0.45);
+      const gym     = Math.round(lost * 0.30);
+      const deep    = Math.max(0, lost - dinners - gym);
+      momEl.innerHTML =
+        `Enough for <span class="lime">${dinners}</span> family dinners, ` +
+        `<span class="lime">${gym}</span> gym sessions, and ` +
+        `<span class="lime">${deep}</span> days of deep work.`;
+    }
     yearEl?.setAttribute('aria-label',
       `At ${fmtH(h)} hours a day, about ${lost} days a year — roughly ${months} ${months === 1 ? 'month' : 'months'} — go to the screen.`);
   }

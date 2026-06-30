@@ -713,34 +713,28 @@ img, svg, canvas { display: block; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Centred stat + sub */
+/* Centred closing line — two stacked lines */
 .numbers__bottom {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(10px, 1.2vw, 16px);
+  gap: clamp(7px, 0.9vw, 11px);
   text-align: center;
-  max-width: 52ch;
+  max-width: min(100%, 620px);
 }
-.numbers__turn-stat {
-  font-size: clamp(24px, 3.2vw, 44px);
-  font-weight: 800;
-  letter-spacing: -.038em;
-  line-height: 1.15;
+.numbers__turn {
+  font-size: clamp(18px, 2vw, 22px);
+  font-weight: 500;
+  letter-spacing: -.02em;
+  line-height: 1.3;
   color: var(--ink-display);
   margin: 0;
-  font-variant-numeric: tabular-nums;
 }
-.numbers__turn-stat strong {
-  display: inline-block;
-  min-width: 2ch;
-  text-align: right;
-}
-.numbers__sub {
-  font-size: clamp(13px, 1.35vw, 16px);
+.numbers__turn-detail {
+  font-size: clamp(13px, 1.4vw, 16px);
   color: var(--ink-3);
-  line-height: 1.7;
   font-weight: 400;
+  line-height: 1.4;
   margin: 0;
 }
 
@@ -1376,7 +1370,11 @@ img, svg, canvas { display: block; }
 }
 /* Pills sit above the sliver of mosaic that tucks underneath */
 .modes__list { position: relative; z-index: 1; }
-.modes__head { grid-column: 1 / span 6; margin-bottom: 20px; }
+.modes__head { grid-column: 1 / -1; margin-bottom: 20px; }
+/* Title stays exactly two lines: the <br> sets the break, and the full-measure
+   column keeps each line from wrapping further (was spilling to 3–4 lines at
+   desktop when the heading sat in a half-width column). */
+.modes__head .hed { text-wrap: balance; }
 .modes__list {
   grid-column: 1 / -1;
   display: grid;
@@ -1386,31 +1384,81 @@ img, svg, canvas { display: block; }
   overflow: hidden;
 }
 .mode {
+  position: relative; isolation: isolate;
   display: flex; flex-direction: column; gap: 0;
   padding: 48px 36px;
   border-right: 1px solid var(--line);
-  transition: background .35s var(--ease);
+  transition: background .45s var(--ease);
 }
 .modes__list .mode:last-child { border-right: none; }
-.mode:hover { background: rgba(191,255,71,.03); }
+/* Ambient category light blooms from the top of the card on hover —
+   replaces the old flat lime wash with each category's own colour. */
+.mode::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  opacity: 0; transition: opacity .5s var(--ease); pointer-events: none;
+  background: radial-gradient(120% 78% at 26% -8%,
+              color-mix(in srgb, var(--accent, #fff) 18%, transparent), transparent 68%);
+}
+.mode:hover { background: color-mix(in srgb, var(--accent, #fff) 4%, transparent); }
+.mode:hover::before { opacity: 1; }
 /* Hierarchy: title (bold white) → subheading (medium white) → paragraph (muted) */
-.mode__title { font-size: clamp(18px, 1.8vw, 24px); font-weight: 800; letter-spacing: -.02em; margin-bottom: 10px; transition: color .25s ease; }
+.mode__title {
+  position: relative;
+  font-size: clamp(18px, 1.8vw, 24px); font-weight: 800; letter-spacing: -.02em;
+  margin-bottom: 18px;   /* opened up so the hover rule centres in the gap */
+  color: var(--ink-display);
+  /* category gradient sits clipped to the glyphs, hidden behind the fill colour
+     until hover reveals it (fades fill → transparent for a smooth ignite) */
+  background-image: var(--grad, none);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: currentColor;
+  transition: color .4s var(--ease), -webkit-text-fill-color .4s var(--ease);
+}
+.mode__title::after {
+  content: ''; position: absolute; left: 0; bottom: -10px;
+  width: 30px; height: 2px; border-radius: 2px;
+  background-image: var(--grad, none);
+  transform: scaleX(0); transform-origin: left center;
+  opacity: 0; transition: transform .45s var(--ease), opacity .3s ease;
+}
+.mode:hover .mode__title { color: transparent; -webkit-text-fill-color: transparent; }
+.mode:hover .mode__title::after { transform: scaleX(1); opacity: 1; }
+/* Per-category type "voice" on the heading only — body copy stays Satoshi.
+   Each face is tuned for optical size so the four titles sit on one baseline. */
+.mode:nth-child(1) .mode__title {          /* Productivity — Clash Display, focused */
+  font-family: 'Clash Display', 'Satoshi', sans-serif;
+  font-weight: 600; letter-spacing: -.01em;
+}
+.mode:nth-child(2) .mode__title {          /* Wellbeing — Erode, calm soft serif */
+  font-family: 'Erode', Georgia, serif;
+  font-weight: 500; letter-spacing: 0;
+  font-size: clamp(20px, 2vw, 26px);
+}
+.mode:nth-child(3) .mode__title {          /* Body — Tanker, athletic condensed */
+  font-family: 'Tanker', 'Satoshi', sans-serif;
+  font-weight: 400; letter-spacing: .005em;
+  font-size: clamp(22px, 2.2vw, 30px);
+  text-transform: uppercase;
+}
+.mode:nth-child(4) .mode__title {          /* Life — Gambetta italic, editorial */
+  font-family: 'Gambetta', Georgia, serif;
+  font-weight: 500; font-style: italic; letter-spacing: 0;
+  font-size: clamp(21px, 2.1vw, 28px);
+}
 .mode__desc { font-size: clamp(14px, 1.2vw, 15px); font-weight: 600; color: var(--ink); line-height: 1.45; margin-bottom: 10px; display: block; transition: color .25s ease; }
 .mode__sub { font-size: 13px; font-weight: 400; color: var(--ink-2); line-height: 1.65; display: block; transition: color .25s ease; }
 
-/* Per-category hover: all text adopts the app's HabitRail accent colour */
-.mode:nth-child(1):hover .mode__title,
-.mode:nth-child(1):hover .mode__desc,
-.mode:nth-child(1):hover .mode__sub { color: #5AC8FA; } /* Productivity – cyan */
-.mode:nth-child(2):hover .mode__title,
-.mode:nth-child(2):hover .mode__desc,
-.mode:nth-child(2):hover .mode__sub { color: #30D158; } /* Wellbeing – green */
-.mode:nth-child(3):hover .mode__title,
-.mode:nth-child(3):hover .mode__desc,
-.mode:nth-child(3):hover .mode__sub { color: #FF6B8A; } /* Body – pink */
-.mode:nth-child(4):hover .mode__title,
-.mode:nth-child(4):hover .mode__desc,
-.mode:nth-child(4):hover .mode__sub { color: #FF9F0A; } /* Life – orange */
+/* Per-category identity: an accent (drives glow + underline + desc) and a
+   refined two-stop gradient (drives the heading ignite). Derived from the
+   app's HabitRail hues but lifted into luminous gradients. */
+.mode:nth-child(1) { --accent: #5AC8FA; --grad: linear-gradient(102deg, #5AC8FA, #7E9BFF); } /* Productivity → cyan→periwinkle */
+.mode:nth-child(2) { --accent: #34D27D; --grad: linear-gradient(102deg, #30D158, #A8FF8E); } /* Wellbeing → green→mint */
+.mode:nth-child(3) { --accent: #FF6F92; --grad: linear-gradient(102deg, #FF6B8A, #FF9E6B); } /* Body → pink→coral */
+.mode:nth-child(4) { --accent: #FFAE3A; --grad: linear-gradient(102deg, #FFB23A, #FFDC8C); } /* Life → amber→gold */
+/* Body copy on hover: the one-line desc lifts to the accent; the paragraph
+   only brightens toward white — kept readable, never fully saturated. */
+.mode:hover .mode__desc { color: var(--accent); }
+.mode:hover .mode__sub  { color: var(--ink); }
 @media (max-width: 860px) {
   .modes__grid { grid-template-columns: 1fr; }
   .modes__head, .modes__list { grid-column: 1; }
@@ -1421,6 +1469,7 @@ img, svg, canvas { display: block; }
   .modes__list .mode:nth-child(3) { border-top: 1px solid var(--line); }
 }
 @media (max-width: 480px) {
+  .modes__head .hed { font-size: clamp(28px, 8vw, 40px); }
   .modes__list { grid-template-columns: 1fr; }
   .mode { border-right: none; border-top: 1px solid var(--line); padding: 32px 24px; }
   .modes__list .mode:first-child { border-top: none; }
