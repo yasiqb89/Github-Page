@@ -815,14 +815,20 @@ img, svg, canvas { display: block; }
 .block__mockup { display: flex; justify-content: flex-start; align-items: flex-start; }
 .mockup-combo { position: relative; display: inline-block; width: 100%; max-width: 780px; }
 
-/* The bundled mockup renders a dark "desktop" margin above/below the browser
-   window. .safari-crop clips those empty dark strips so the window (Safari chrome
-   + page) sits flush in the framed mockup — no black padding band. overflow lives
-   here, not on .mockup-combo, so the iPhone overlay can still overhang. */
+/* The bundled mockup is a black box: it only lays out correctly at its natural
+   embed width and draws a small dark "desktop" margin around the browser window
+   whose size does NOT scale predictably with width (≈25px at 780, ≈7px at 768),
+   so a percentage crop clips into the chrome at other widths. Instead we PIN the
+   iframe to the known-good width (780px — window at y=25, 439px tall, full width)
+   and uniformly scale it to the container with container-query units. The iframe
+   always renders its 780 layout internally, so the 25px margin is a constant and
+   the crop is pixel-exact at every viewport. overflow lives here, not on
+   .mockup-combo, so the iPhone overlay can still overhang. */
 .safari-crop {
+  container-type: inline-size;
   position: relative;
   width: 100%;
-  aspect-ratio: 1203 / 677;   /* the window region; ~25px desktop margins removed */
+  aspect-ratio: 780 / 439;    /* the visible window region of the fixed render */
   border-radius: 12px;
   overflow: hidden;
   /* box-shadow (not filter:drop-shadow) avoids re-rasterising the shadow from the
@@ -833,10 +839,14 @@ img, svg, canvas { display: block; }
 }
 .safari-svg {
   position: absolute;
-  top: -5.7%;        /* pull the dark desktop strip above the clip */
+  top: 0;
   left: 0;
-  width: 100%;
-  height: 111.2%;    /* enlarge so the window fills + bottom strip clips off */
+  width: 780px;               /* fixed known-good render width */
+  height: 488px;
+  transform-origin: top left;
+  /* fill the container, then lift the constant 25px desktop margin off the top.
+     translate applies pre-scale, so it removes the same 25px at any scale. */
+  transform: scale(calc(100cqw / 780)) translateY(-25px);
   display: block;
   border: 0;
   background: transparent;

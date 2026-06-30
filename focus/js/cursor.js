@@ -39,6 +39,7 @@ export function initCursor() {
   document.addEventListener('mouseout',  onOut,  { passive: true });
 
   function loop() {
+    if (document.hidden) { raf = null; return; }
     raf = requestAnimationFrame(loop);
     dot.style.transform = `translate(${cx}px, ${cy}px) translate(-50%,-50%)`;
     tx += (cx - tx) * 0.16;
@@ -46,6 +47,10 @@ export function initCursor() {
     trail.style.transform = `translate(${tx}px, ${ty}px) translate(-50%,-50%)`;
   }
   raf = requestAnimationFrame(loop);
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && !raf) raf = requestAnimationFrame(loop);
+  });
 
   return () => cancelAnimationFrame(raf);
 }

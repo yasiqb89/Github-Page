@@ -1,7 +1,6 @@
 // ── Focus — marketing site v4 (clean rebuild) ────────────────
 import gsap from 'gsap';
 import ScrollTrigger from 'gsap/ScrollTrigger';
-import SplitType from 'split-type';
 import Lenis from 'lenis';
 import { initCursor, initMagnetic } from './cursor.js';
 import { runPreloader } from './preloader.js';

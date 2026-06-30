@@ -7,7 +7,7 @@
   <meta name="description" content="Session-based focus with ScreenTime blocking, 31 habit modes, and an identity that grows every time you show up."/>
 
   <link rel="preconnect" href="https://api.fontshare.com" crossorigin/>
-  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet"/>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
 
   <script type="importmap">
@@ -15,11 +15,13 @@
     "imports": {
       "gsap":               "https://esm.sh/gsap@3.12.5",
       "gsap/ScrollTrigger": "https://esm.sh/gsap@3.12.5/ScrollTrigger",
-      "split-type":         "https://esm.sh/split-type@0.3.4",
       "lenis":              "https://esm.sh/lenis@1.1.14"
     }
   }
   </script>
+  <link rel="modulepreload" href="https://esm.sh/gsap@3.12.5" crossorigin/>
+  <link rel="modulepreload" href="https://esm.sh/gsap@3.12.5/ScrollTrigger" crossorigin/>
+  <link rel="modulepreload" href="https://esm.sh/lenis@1.1.14" crossorigin/>
 </head>
 <body>
 
@@ -783,6 +785,7 @@
         <iframe class="safari-svg focus-flow-frame"
                 src="focus-flow.html"
                 scrolling="no"
+                loading="lazy"
                 title="Focus blocking a session — Deep Work mode">
         </iframe>
       </div>
