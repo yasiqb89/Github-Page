@@ -73,7 +73,7 @@ async function init() {
 
   revealHero();
   setupHeroAtmosphere();
-  setupHeroHandoff();
+  setupMeetFocusHandoff();
   ScrollTrigger.refresh();
 }
 
@@ -93,25 +93,27 @@ function setupHeroAtmosphere() {
   );
 }
 
-// ─── hero → problem cover/stack handoff ─────────────────────
-// The hero sticks (see the .hero sticky media query in style.css) while the
-// problem section rises over it. Here we scrub the hero's content receding —
-// a slight sink + fade — so the handoff reads as the hero sinking back rather
-// than a flat scroll-away. Gated to the same desktop threshold as the CSS
-// stick and the problem pin; touch / reduced-motion skip it (plain scroll).
-function setupHeroHandoff() {
-  const hero = document.getElementById('hero');
-  if (!hero || reduced) return;
+// ─── cost → Meet Focus cover/stack handoff ──────────────────
+// The cost section pins (see the #numbers sticky media query in style.css)
+// while the Meet Focus intro rises up over it as the reveal. Here we scrub the
+// cost content receding — a slight sink + fade — so it reads as the cost
+// section sinking back beneath Meet Focus rather than a flat scroll-away. The
+// scrub range is the cost section's own scroll height, which is exactly how
+// far Meet Focus travels to fully cover it (height-agnostic). Gated to the
+// same desktop threshold as the CSS stick; touch / reduced-motion skip it.
+function setupMeetFocusHandoff() {
+  const numbers = document.getElementById('numbers');
+  if (!numbers || reduced) return;
   if (!matchMedia('(min-width: 861px) and (hover: hover)').matches) return;
-  const targets = [hero.querySelector('.hero__layout'), hero.querySelector('.hero__scrollcue')].filter(Boolean);
-  if (!targets.length) return;
-  gsap.to(targets, {
+  const wrap = numbers.querySelector('.numbers__wrap');
+  if (!wrap) return;
+  gsap.to(wrap, {
     scale: 0.94,
     opacity: 0,
     yPercent: -3,
     transformOrigin: '50% 42%',
     ease: 'none',
-    scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true },
+    scrollTrigger: { trigger: numbers, start: 'top top', end: 'bottom top', scrub: true },
   });
 }
 

@@ -400,6 +400,16 @@ img, svg, canvas { display: block; }
 #numbers {
   background: #141414;
 }
+/* Cover/stack handoff — the cost section pins and sinks back (JS scrubs
+   .numbers__wrap receding) while the Meet Focus intro rises up over it as the
+   reveal. Height-agnostic: because every section is #141414, the cost section
+   pinning shorter than the viewport just exposes Meet Focus's dark top edge —
+   invisible until its content rises in. Desktop + motion-OK only, mirroring the
+   problem-pin gate; touch / reduced-motion get plain stacked scroll. Works
+   because body is overflow-x:clip (not hidden), which preserves sticky. */
+@media (min-width: 861px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
+  #numbers { position: sticky; top: 0; }
+}
 
 .problem {
   position: relative;
@@ -621,14 +631,6 @@ img, svg, canvas { display: block; }
    HERO
 ───────────────────────────────────── */
 .hero { min-height: 100svh; position: relative; overflow: hidden; --hero-atmo: 1; }
-/* Cover/stack handoff — the hero sticks to the top while the problem section
-   rises over it (JS scrubs the hero content receding, so it reads as depth,
-   not a flat scroll-away). Gated to desktop + motion-OK, mirroring the problem
-   pin's own threshold; touch / reduced-motion get plain stacked scroll.
-   Works because body is overflow-x:clip (not hidden), which preserves sticky. */
-@media (min-width: 861px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .hero { position: sticky; top: 0; height: 100svh; }
-}
 /* atmospheric glow — soft lime/cyan light pooled on the right, behind the grid.
    Fades out toward the bottom so it dissolves into the next section. */
 .hero::before {
@@ -2073,6 +2075,50 @@ img, svg, canvas { display: block; }
   opacity: 0.50;
   margin-top: 18px;
   position: relative;
+}
+
+/* ─────────────────────────────────────
+   SECTION ✦ — THE TURN (product reveal)
+   A slim band: transparent phone-on-rock cutout spans the full height
+   and feathers into the section on every edge; one line of copy sits left.
+───────────────────────────────────── */
+.turn {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(40px, 5vh, 80px) var(--pad);
+}
+.turn__inner { display: flex; flex-direction: column; align-items: center; max-width: 1000px; margin: 0 auto; }
+
+.turn__head { margin: 0 auto; font-size: clamp(34px, 5.2vw, 64px); line-height: 1.08; }
+
+/* the floating phone, centred in the flow — kept at its exact size (98svh)
+   and image; only its placement changes. */
+.turn__media { height: 98svh; margin: clamp(20px, 3vh, 40px) auto; }
+.turn__media img { display: block; height: 100%; width: auto; }
+
+/* supporting line — held to two lines by a wide measure; · separates the halves. */
+.turn__sub {
+  position: relative;
+  z-index: 1;
+  /* pulled up to sit ~66% down the phone, over its dissolved lower portion */
+  margin: -36svh auto 0;
+  max-width: 740px;
+  font-size: clamp(15px, 1.5vw, 17px);
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: balance;
+}
+
+@media (max-width: 860px) {
+  /* on narrow screens the tall phone must be width-constrained (height-driven
+     would bleed far off both sides), so the screen stays readable. */
+  .turn__media { height: auto; width: min(92%, 430px); }
+  .turn__media img { height: auto; width: 100%; }
+  .turn__sub { max-width: 42ch; }
 }
 
 /* ─────────────────────────────────────
