@@ -63,7 +63,6 @@ async function init() {
   navAndProgress();
   setupNavLinks();
   setupMobileNav();
-  wireStoreBtns();
 
   initHeroGradient(document.getElementById('hero-aura'));
   initGrid(document.getElementById('hero-grid'));
@@ -74,6 +73,7 @@ async function init() {
 
   revealHero();
   setupHeroAtmosphere();
+  setupHeroHandoff();
   ScrollTrigger.refresh();
 }
 
@@ -93,6 +93,28 @@ function setupHeroAtmosphere() {
   );
 }
 
+// ─── hero → problem cover/stack handoff ─────────────────────
+// The hero sticks (see the .hero sticky media query in style.css) while the
+// problem section rises over it. Here we scrub the hero's content receding —
+// a slight sink + fade — so the handoff reads as the hero sinking back rather
+// than a flat scroll-away. Gated to the same desktop threshold as the CSS
+// stick and the problem pin; touch / reduced-motion skip it (plain scroll).
+function setupHeroHandoff() {
+  const hero = document.getElementById('hero');
+  if (!hero || reduced) return;
+  if (!matchMedia('(min-width: 861px) and (hover: hover)').matches) return;
+  const targets = [hero.querySelector('.hero__layout'), hero.querySelector('.hero__scrollcue')].filter(Boolean);
+  if (!targets.length) return;
+  gsap.to(targets, {
+    scale: 0.94,
+    opacity: 0,
+    yPercent: -3,
+    transformOrigin: '50% 42%',
+    ease: 'none',
+    scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true },
+  });
+}
+
 // ─── anchor scroll — Lenis when available, fallback otherwise ──
 function setupAnchors() {
   document.querySelectorAll('a[href^="#"]').forEach((a) => {
@@ -104,6 +126,11 @@ function setupAnchors() {
       e.preventDefault();
       if (lenis) lenis.scrollTo(el, { offset: 0, duration: 1.2 });
       else el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Move keyboard focus to the target (a no-op on non-focusable targets,
+      // since .focus() only does anything on elements with tabindex or that
+      // are natively focusable) — otherwise clicking the skip-link scrolls
+      // the page but leaves focus behind, defeating its purpose.
+      el.focus({ preventScroll: true });
     });
   });
 }
@@ -276,13 +303,15 @@ function setupSlider() {
   const mlabels   = [...document.querySelectorAll('.numbers__mlabel')];
   const momEl     = document.querySelector('[data-moments]');
   const yearEl    = document.querySelector('[data-year]');
+  const liveEl    = document.querySelector('[data-slider-live]');
+  let liveTimer   = 0;
 
   const fmtH = (h) => {
     const v = Math.round(h * 2) / 2;
     return v % 1 === 0 ? String(v | 0) : v.toFixed(1);
   };
 
-  function renderAt(h) {
+  function renderAt(h, announce) {
     const pct     = ((h - +slider.min) / (+slider.max - +slider.min)) * 100;
     slider.style.setProperty('--fill', `${pct}%`);
     if (elScreen) elScreen.textContent = fmtH(h);
@@ -310,12 +339,21 @@ function setupSlider() {
         `<span class="lime">${gym}</span> gym sessions, and ` +
         `<span class="lime">${deep}</span> days of deep work.`;
     }
-    yearEl?.setAttribute('aria-label',
-      `At ${fmtH(h)} hours a day, about ${lost} days a year — roughly ${months} ${months === 1 ? 'month' : 'months'} — go to the screen.`);
+    const summary = `At ${fmtH(h)} hours a day, about ${lost} days a year — roughly ${months} ${months === 1 ? 'month' : 'months'} — go to the screen.`;
+    yearEl?.setAttribute('aria-label', summary);
+
+    // Announce the derived total to screen readers on user-driven changes only
+    // (not the initial render) — debounced so a screen reader doesn't narrate
+    // every intermediate step while the slider is actively being dragged,
+    // only the value it settles on.
+    if (liveEl && announce) {
+      clearTimeout(liveTimer);
+      liveTimer = setTimeout(() => { liveEl.textContent = summary; }, 500);
+    }
   }
 
-  slider.addEventListener('input', () => renderAt(parseFloat(slider.value)));
-  renderAt(7);
+  slider.addEventListener('input', () => renderAt(parseFloat(slider.value), true));
+  renderAt(7, false);
 }
 
 // ─── modes: scroll-staggered description reveal ─────────────
@@ -585,6 +623,11 @@ function setupMobileNav() {
   const toggle = document.getElementById('navToggle');
   const mobile = document.getElementById('navMobile');
   if (!toggle || !mobile) return;
+  const close = () => {
+    mobile.classList.remove('open'); toggle.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false'); mobile.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  };
   toggle.addEventListener('click', () => {
     const open = mobile.classList.toggle('open');
     toggle.classList.toggle('open', open);
@@ -592,31 +635,13 @@ function setupMobileNav() {
     mobile.setAttribute('aria-hidden', !open);
     document.body.style.overflow = open ? 'hidden' : '';
   });
-  mobile.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => {
-    mobile.classList.remove('open'); toggle.classList.remove('open');
-    toggle.setAttribute('aria-expanded', 'false'); mobile.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  }));
-}
-
-// ─── "coming soon" toast ────────────────────────────────────
-function wireStoreBtns() {
-  document.querySelectorAll('#storeBtn, #navCta, .nav__mobile-cta').forEach((btn) => {
-    btn?.addEventListener('click', (e) => { e.preventDefault(); showToast('Coming soon to the App Store 🚀'); });
+  mobile.querySelectorAll('a').forEach((a) => a.addEventListener('click', close));
+  // Guard against the menu getting stuck open if the viewport crosses back
+  // above the mobile breakpoint while it's open (e.g. rotating a foldable) —
+  // the toggle disappears at that width, so there'd be no way to close it.
+  window.addEventListener('resize', () => {
+    if (innerWidth > 680) close();
   });
-}
-function showToast(msg) {
-  const t = document.createElement('div');
-  t.textContent = msg;
-  Object.assign(t.style, {
-    position: 'fixed', bottom: '32px', left: '50%', transform: 'translate(-50%, 12px)',
-    background: '#BFFF47', color: '#0b0f07', padding: '12px 28px', borderRadius: '50px',
-    fontSize: '13px', fontWeight: '700', letterSpacing: '.04em', zIndex: '99999', opacity: '0',
-    transition: 'opacity .3s, transform .3s', whiteSpace: 'nowrap',
-  });
-  document.body.appendChild(t);
-  requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translate(-50%, 0)'; });
-  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translate(-50%, 8px)'; setTimeout(() => t.remove(), 350); }, 2500);
 }
 
 init();
