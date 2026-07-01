@@ -26,6 +26,7 @@
 </head>
 <body>
 
+<a class="skip-link" href="#hero">Skip to content</a>
 
 <!-- Preloader — Kinetic Wordmark (final word flies up to become the nav logo) -->
 <div id="preloader" aria-hidden="true">
@@ -45,13 +46,27 @@
     <li><a class="nav__link" href="#modes">Modes</a></li>
   </ul>
   <a href="#get" class="nav__cta">Try for free</a>
+  <button id="navToggle" class="nav__toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navMobile">
+    <span class="nav__toggle-bar"></span>
+    <span class="nav__toggle-bar"></span>
+    <span class="nav__toggle-bar"></span>
+  </button>
   <span class="nav__line" aria-hidden="true"></span>
 </nav>
+
+<div id="navMobile" class="nav__mobile" aria-hidden="true">
+  <ul class="nav__mobile-links" role="list">
+    <li><a class="nav__mobile-link" href="#problem">Problem</a></li>
+    <li><a class="nav__mobile-link" href="#overview">Features</a></li>
+    <li><a class="nav__mobile-link" href="#modes">Modes</a></li>
+  </ul>
+  <a href="#get" class="nav__mobile-cta">Try for free</a>
+</div>
 
 <!-- ════════════════════════════════════════
      HERO  (midnight)
 ════════════════════════════════════════ -->
-<section class="s s--blk hero" id="hero" style="--from:#141414;--to:#141414">
+<section class="s s--blk hero" id="hero" tabindex="-1" style="--from:#141414;--to:#141414">
   <canvas class="hero__aura" id="hero-aura" aria-hidden="true"></canvas>
   <canvas class="hero__grid" id="hero-grid" aria-hidden="true"></canvas>
   <div class="hero__layout page-grid">
@@ -63,17 +78,17 @@
       </h1>
       <p class="hero__lead reveal">Build better habits, reduce distractions, and make space for the things that matter.</p>
       <div class="hero__cta reveal">
-        <a class="store-btn store-btn--lime" href="#get" aria-label="Download on the App Store">
+        <a class="store-btn store-btn--lime" href="#get" aria-label="Coming soon to the App Store">
           <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
           <span class="store-btn__text">
-            <span class="store-btn__sm">Download on the</span>
+            <span class="store-btn__sm">Coming soon to the</span>
             <span class="store-btn__lg">App Store</span>
           </span>
         </a>
-        <a class="store-btn store-btn--ghost" href="#get" aria-label="Add the extension to Chrome">
+        <a class="store-btn store-btn--ghost" href="#get" aria-label="Coming soon to Chrome">
           <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
           <span class="store-btn__text">
-            <span class="store-btn__sm">Add to</span>
+            <span class="store-btn__sm">Coming soon to</span>
             <span class="store-btn__lg">Chrome</span>
           </span>
         </a>
@@ -166,6 +181,7 @@
         <input type="range" id="screenSlider" class="slider"
           min="2" max="12" step="0.5" value="7"
           aria-label="Average daily screen time in hours"/>
+        <p class="sr-only" aria-live="polite" data-slider-live></p>
       </div>
       <div class="numbers__bottom">
         <p class="numbers__turn reveal">Focus helps you reclaim the moments that matter</p>
@@ -823,7 +839,7 @@
   <div class="page-grid modes__grid">
     <header class="modes__head">
       <p class="kicker r-up">HABITS</p>
-      <h2 class="hed r-scroll" data-scroll-reveal>The right mode for every<br><span class="lime">moment that matters.</span></h2>
+      <h2 class="hed r-scroll" data-scroll-reveal>The right mode for<br><span class="lime">every part of your day.</span></h2>
     </header>
 
     <!-- Ambient mosaic — upper strip, above the pills -->
@@ -937,7 +953,7 @@
       </div>
     </div>
     <div id="journeyDeck" aria-label="Identity stage journey"></div>
-    <p class="journey__foot">A journey measured not in days, but in depth. Every session contributes to who you become · twenty-two stages, each one earned.</p>
+    <p class="journey__foot">A journey measured not in days, but in depth. Every session contributes to who you become · 22 stages, each one earned.</p>
   </div>
 </section>
 
@@ -948,12 +964,12 @@
   <div class="wrap get__inner">
     <p class="kicker r-up" style="justify-content:center">Try Focus for free</p>
     <h2 class="hed r-scroll get__title" data-scroll-reveal>Your best <span class="lime">hours</span><br>start here.</h2>
-    <p class="get__sub reveal">Three modes, the full identity journey, and the shield that holds · no account required.</p>
+    <p class="get__sub reveal">31 habit modes, the full identity journey, and the shield that holds · no account required.</p>
     <div class="get__stores reveal-children">
-      <a class="store-btn store-btn--lime" id="storeBtn" href="#" aria-label="Download on the App Store">
+      <span class="store-btn store-btn--lime is-soon" aria-disabled="true">
         <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
-        <span class="store-btn__text"><span class="store-btn__sm">Download on the</span><span class="store-btn__lg">App Store</span></span>
-      </a>
+        <span class="store-btn__text"><span class="store-btn__sm">Coming soon</span><span class="store-btn__lg">App Store</span></span>
+      </span>
       <span class="store-btn store-btn--ghost is-soon" aria-disabled="true">
         <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.4v17.2c0 .86.95 1.38 1.68.92l.2-.15 9.2-9.13a.6.6 0 0 0 0-.86L6.88 2.25l-.2-.15A1.07 1.07 0 0 0 5 3.4z"/></svg>
         <span class="store-btn__text"><span class="store-btn__sm">Coming soon</span><span class="store-btn__lg">Google Play</span></span>
