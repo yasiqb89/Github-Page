@@ -24,7 +24,12 @@
    RESET / BASE
 ───────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { /* smooth scroll handled by Lenis */ }
+html {
+  /* smooth scroll handled by Lenis */
+  color-scheme: dark;                     /* native form controls + UA chrome match the theme */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.16) #141414;
+}
 body {
   background: #141414;
   color: var(--ink);
@@ -39,6 +44,31 @@ body {
 a { color: inherit; text-decoration: none; }
 img, svg, canvas { display: block; }
 .lime { color: var(--lime); }
+
+/* Editorial voice — a single contrasting serif-italic gesture inside display
+   headlines (Gambetta is already loaded at 501 = weight-500 italic). Used on
+   ~one emphasis word per key headline; the contrast against 900-weight Satoshi
+   is the point, so never apply it to whole lines. */
+.voice {
+  font-family: 'Gambetta', Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.06em;
+  letter-spacing: -0.015em;
+  padding-right: 0.05em; /* italic overhang room inside overflow-hidden line wraps */
+}
+
+/* text selection stays in the brand world */
+::selection { background: rgba(191,255,71,.9); color: #10160a; }
+
+/* slim on-theme scrollbar (WebKit; Firefox handled on html above) */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #141414; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 8px; border: 2px solid #141414; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.26); }
+
+/* keyboard focus ring — lime, only for :focus-visible so pointer clicks stay clean */
+:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
 
 
 /* ─────────────────────────────────────
@@ -279,6 +309,13 @@ img, svg, canvas { display: block; }
 .reveal-children.is-in > *:nth-child(2) { transition: opacity .7s .1s var(--ease), transform .7s .1s var(--ease); }
 .reveal-children.is-in > *:nth-child(3) { transition: opacity .7s .2s var(--ease), transform .7s .2s var(--ease); }
 
+/* Clip-wipe reveal — image enters as a top-down curtain wipe instead of the
+   fade+rise used everywhere else (variety in reveal grammar for the biggest
+   imagery). clip-path only — no layout, no repaint outside the element. */
+.r-clip { clip-path: inset(0 0 100% 0); }
+.r-clip.is-in { clip-path: inset(0 0 0 0); transition: clip-path 1.1s var(--ease); }
+@media (prefers-reduced-motion: reduce) { .r-clip { clip-path: none; } }
+
 /* Scroll-reveal headline — each word fades from dim → full opacity as it scrolls through */
 .r-scroll { color: var(--ink-display); }
 /* No will-change: color — colour isn't a compositable property, so it only
@@ -368,6 +405,11 @@ img, svg, canvas { display: block; }
   .store-btn:hover { transform: translateY(-2px); }
 }
 .store-btn:active { transform: scale(0.97); }
+/* Magnetic buttons: cursor.js lerps the transform itself on rAF — a CSS
+   transform transition on top double-smooths it into rubber-banding, so
+   transition everything except transform (the hover lift is replaced by the
+   magnet pull anyway). */
+.store-btn.magnetic { transition-property: background, border-color, box-shadow; }
 .store-btn__glyph { width: 25px; height: 25px; flex: none; }
 .store-btn__text { display: flex; flex-direction: column; line-height: 1; }
 .store-btn__sm { font-size: 11px; font-weight: 500; letter-spacing: .03em; opacity: .68; margin-bottom: 3px; }
@@ -2124,19 +2166,48 @@ img, svg, canvas { display: block; }
 /* ─────────────────────────────────────
    SECTION 5 — AVAILABILITY
 ───────────────────────────────────── */
-.get { padding: clamp(110px, 15vw, 200px) var(--pad); text-align: center; }
-.get__inner { max-width: 760px; margin: 0 auto; }
-.get__title { margin: 0 auto 20px; }
+/* Finale — one full-screen closing statement (minus the slim footer strip
+   below, so the last viewport reads as a single composed scene). */
+.get {
+  min-height: calc(100svh - 96px);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  padding: clamp(90px, 12vh, 150px) var(--pad) clamp(50px, 7vh, 90px);
+  text-align: center;
+}
+/* Giant brand arc behind the closing CTA — solid faint stroke (no gradients,
+   no filters → no banding, no extra compositing). The slow spin is a single
+   transform-only animation on one element. */
+.get__arc {
+  position: absolute; left: 50%; top: 50%; z-index: 0;
+  width: min(94vw, 900px); height: auto; aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  opacity: .05;
+  pointer-events: none;
+  animation: get-arc-spin 90s linear infinite;
+}
+@keyframes get-arc-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) { .get__arc { animation: none; } }
+.get__inner { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; }
+.get__title {
+  margin: 0 auto 24px;
+  font-size: clamp(46px, 7.2vw, 104px);
+}
 /* One flowing sentence with a · separator. Wide enough to sit on a single line
    on desktop; the clamp + natural wrapping keep it responsive on narrow screens. */
-.get__sub { font-size: clamp(14px, 1.5vw, 15px); color: var(--ink-2); line-height: 1.6; max-width: 740px; margin: 0 auto 40px; text-wrap: balance; }
+.get__sub { font-size: clamp(15px, 1.6vw, 17px); color: var(--ink-2); line-height: 1.6; max-width: 740px; margin: 0 auto 48px; text-wrap: balance; }
 .get__stores { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-bottom: 10px; }
 .store-btn.is-soon { opacity: .4; cursor: default; pointer-events: none; }
 
 /* ─────────────────────────────────────
    FOOTER
 ───────────────────────────────────── */
-.footer { padding: 36px var(--pad); border-top: 1px solid var(--line); }
+/* Footer folds into the finale viewport — no border-top: it was the only hard
+   dividing line on an otherwise continuous page surface. */
+.footer { padding: 26px var(--pad) 44px; }
 .footer__inner { max-width: min(100%, var(--max)); margin: 0 auto; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 .footer__logo { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; margin-right: auto; }
 .footer__links { display: flex; gap: 24px; }

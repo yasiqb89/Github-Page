@@ -58,6 +58,7 @@ async function init() {
   setupModes();
   setupModeInteractions();
   setupModesMosaic();
+  setupMosaicVelocity();
   setupTilt();
   setupHeroDevices();
   navAndProgress();
@@ -217,7 +218,7 @@ function setupProblemReveal() {
 
 // ─── reveal-on-enter system ─────────────────────────────────
 function setupReveals() {
-  document.querySelectorAll('.reveal, .r-up, .reveal-children').forEach((el) => {
+  document.querySelectorAll('.reveal, .r-up, .reveal-children, .r-clip').forEach((el) => {
     ScrollTrigger.create({ trigger: el, start: 'top 88%', once: true, onEnter: () => el.classList.add('is-in') });
   });
 }
@@ -445,6 +446,32 @@ function setupModesMosaic() {
         m.card.dataset.baseOpacity = base.toFixed(4);
         gsap.set(m.card, { opacity: base, y: (1 - eased) * m.dir });
       }
+    },
+  });
+}
+
+// ─── scroll-velocity lean — the mosaic strips tilt with scroll speed ──
+// One well-tuned physical detail: the two poster grids skew a degree or so in
+// the direction of fast scrolling and spring back when it settles, so the
+// mosaic reads as having weight. quickTo smooths the writes; a debounced
+// settle-call returns to 0 since onUpdate stops firing when scrolling stops.
+// Transform-only on two elements, and only while the modes section is on
+// screen — the trigger's own range gates the work.
+function setupMosaicVelocity() {
+  if (reduced || !matchMedia('(min-width: 861px) and (hover: hover)').matches) return;
+  const strips = gsap.utils.toArray('.modes__mg');
+  if (!strips.length) return;
+  const setters = strips.map((s) => gsap.quickTo(s, 'skewY', { duration: 0.5, ease: 'power3.out' }));
+  let settle = null;
+  ScrollTrigger.create({
+    trigger: '#modes',
+    start: 'top bottom',
+    end: 'bottom top',
+    onUpdate(self) {
+      const lean = gsap.utils.clamp(-1.2, 1.2, self.getVelocity() / -450);
+      setters.forEach((set) => set(lean));
+      if (settle) settle.kill();
+      settle = gsap.delayedCall(0.12, () => setters.forEach((set) => set(0)));
     },
   });
 }
