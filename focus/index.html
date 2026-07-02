@@ -27,7 +27,7 @@
 
   <link rel="preconnect" href="https://api.fontshare.com" crossorigin/>
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin/>
-  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&f[]=clash-display@600&f[]=erode@400&f[]=tanker@400&f[]=gambetta@501&display=swap" rel="stylesheet"/>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&f[]=clash-display@600&f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
 
   <script type="importmap">
@@ -130,11 +130,11 @@
     <div class="problem__noise" aria-hidden="true"></div>
     <div class="problem__layout page-grid">
       <div class="problem__copy">
-        <p class="problem__kicker"><span class="dot"></span>The real problem</p>
+        <p class="problem__kicker"><svg class="kicker__ring" viewBox="0 0 20 20" aria-hidden="true"><circle class="kicker__ring-track" cx="10" cy="10" r="8"/><circle class="kicker__ring-fill" cx="10" cy="10" r="8"/></svg>The real problem</p>
         <p class="problem__line">Your attention is not <span class="lime">weak.</span></p>
         <p class="problem__line">Your environment is <span class="lime">loud.</span></p>
         <p class="problem__line">Every ping is <span class="lime">engineered</span> to win.</p>
-        <p class="problem__line">The problem was never <span class="lime">you.</span></p>
+        <p class="problem__line">The problem was never <span class="lime voice">you.</span></p>
       </div>
     </div>
   </div>
@@ -150,7 +150,7 @@
     <header class="numbers__header">
       <p class="kicker r-up">The cost</p>
       <h2 class="numbers__hed r-scroll" data-scroll-reveal>
-        On average, <span class="lime" data-days-lost>106</span> days a year<br>go to the <span class="voice">scroll.</span>
+        On average, <span class="lime" data-days-lost>106</span> days a year<br>go to the <span class="lime voice">scroll.</span>
       </h2>
     </header>
 
@@ -187,24 +187,20 @@
           <span class="numbers__mlabel" data-full="Dec" data-abbr="D"></span>
         </div>
       </div>
-      <p class="numbers__caption">The lime is the time the screen takes.</p>
     </div>
 
     <div class="numbers__footer">
-      <p class="numbers__moments reveal" data-moments>Enough for <span class="lime">48</span> family dinners, <span class="lime">32</span> gym sessions, and <span class="lime">26</span> days of deep work.</p>
+      <p class="numbers__moments reveal">Enough for <span class="lime" data-dinners>48</span> family dinners, <span class="lime" data-gym>32</span> gym sessions, and <span class="lime" data-deep>26</span> days of deep work.</p>
       <div class="numbers__control reveal">
-        <div class="numbers__control-row">
-          <span class="numbers__control-label">Your daily screen time</span>
-          <span class="numbers__control-val"><span data-screen>7</span>h</span>
-        </div>
+        <p class="numbers__control-lead">That's the average. <span class="lime voice">Now try yours.</span></p>
+        <div class="numbers__readout" aria-hidden="true"><span data-screen>7</span><span class="numbers__readout-unit">h a day</span></div>
         <input type="range" id="screenSlider" class="slider"
           min="2" max="12" step="0.5" value="7"
           aria-label="Average daily screen time in hours"/>
+        <div class="numbers__ticks" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
         <p class="sr-only" aria-live="polite" data-slider-live></p>
-      </div>
-      <div class="numbers__bottom">
-        <p class="numbers__turn reveal">Focus helps you reclaim the moments that matter</p>
-        <p class="numbers__turn-detail reveal">better habits, less distractions and space for your priorities.</p>
       </div>
     </div>
 
@@ -216,12 +212,15 @@
      Vertical order: kicker, headline, the floating phone (unchanged, centred),
      then a two-line supporting line.
 ════════════════════════════════════════ -->
-<section class="s s--blk turn" id="turn" style="--from:#141414;--to:#141414">
-  <div class="turn__inner wrap">
-    <p class="kicker r-up" style="justify-content:center">Meet Focus</p>
-    <h2 class="hed r-scroll turn__head" data-scroll-reveal>Your day, spent the way<br>you <span class="lime voice">meant to</span>.</h2>
-    <div class="turn__media r-clip" aria-hidden="true">
-      <img src="img/turn-phone-float.webp" width="1115" height="1720" loading="lazy" alt="">
+<section class="turn" id="turn" style="--from:#F6F3EC;--to:#F6F3EC">
+  <div class="turn__stage">
+    <div class="turn__inner wrap">
+      <p class="kicker r-up" style="justify-content:center">Meet Focus</p>
+      <h2 class="hed r-scroll turn__head" data-scroll-reveal data-sr-ink="var(--paper-ink)">Your day, spent the way<br>you <span class="lime voice">meant to</span>.</h2>
+      <div class="turn__media" aria-hidden="true">
+        <img src="img/turn-phone-float.webp" width="1115" height="1720" loading="lazy" alt="">
+        <div class="turn__bloom" aria-hidden="true"></div>
+      </div>
     </div>
     <p class="turn__sub reveal">Focus brings habit modes, app boundaries, intentional sessions, and progress into one calm experience · so your time feels easier to guide, not harder to manage. No account required.</p>
   </div>
@@ -996,7 +995,6 @@
      SECTION 5 — AVAILABILITY  (black)
 ════════════════════════════════════════ -->
 <section class="s s--blk get" id="get" style="--from:#141414;--to:#141414">
-  <svg class="get__arc" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="#BFFF47" stroke-width="0.5" stroke-linecap="round" stroke-dasharray="34.31 9.67" transform="rotate(-90 10 10)"/></svg>
   <div class="wrap get__inner">
     <p class="kicker r-up" style="justify-content:center">Try Focus for free</p>
     <h2 class="hed r-scroll get__title" data-scroll-reveal>Your best <span class="lime voice">hours</span><br>start here.</h2>

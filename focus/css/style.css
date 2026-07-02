@@ -220,6 +220,23 @@ img, svg, canvas { display: block; }
 .nav__cta:active { transform: scale(0.97); }
 @media (prefers-reduced-motion: reduce) { .nav__line { transform: scaleX(1); transition: opacity .5s var(--ease); } }
 
+/* Paper variant — engaged (ScrollTrigger toggleClass) while the cream Meet
+   Focus sheet is under the fixed nav, so the chrome flips to ink with it. */
+#nav.nav--paper.scrolled {
+  background: rgba(244, 241, 234, .62);
+  box-shadow: inset 0 1px 0 rgba(20,20,20,.05), 0 10px 30px -14px rgba(0,0,0,.16);
+}
+#nav.nav--paper .nav__logo { color: #141414; }
+#nav.nav--paper .nav__link { color: rgba(20,20,20,.72); }
+#nav.nav--paper .nav__link.is-active { color: #141414; }
+#nav.nav--paper .nav__line {
+  background: linear-gradient(90deg, transparent, rgba(20,20,20,.14) 14%, rgba(20,20,20,.14) 86%, transparent);
+}
+#nav.nav--paper .nav__toggle-bar { background: #141414; }
+@media (hover: hover) and (pointer: fine) {
+  #nav.nav--paper .nav__link:hover { color: #141414; background: rgba(20,20,20,.07); }
+}
+
 /* Mobile menu toggle — hidden on desktop, three bars that morph to an X */
 .nav__toggle {
   display: none;
@@ -326,18 +343,18 @@ img, svg, canvas { display: block; }
    TYPOGRAPHY HELPERS
 ───────────────────────────────────── */
 .kicker { font-size: clamp(14px, 1.45vw, 21px); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 12px; margin-bottom: clamp(20px, 1.8vw, 28px); background: linear-gradient(90deg, var(--lime), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-/* Single source of truth for the pulsing dot on every kicker. Sized to track the
-   ~2× larger kicker text so the dot stays visually proportional. */
-.kicker::before, .problem__kicker::before {
-  content: "";
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--lime);
-  display: inline-block;
-  flex-shrink: 0;
-  animation: pulse 2s infinite;
+/* Hold-progress ring — replaces the old pulsing dot on every kicker. The fill
+   sweeps 0→1 as --hold advances: the problem section drives it from its pinned
+   scrub (setupProblemReveal), every other kicker from its own rise into reading
+   position (setupKickerRings). r=8 → circumference 2π·8 ≈ 50.27. Rotated -90°
+   so the fill starts at 12 o'clock. */
+.kicker__ring { width: 14px; height: 14px; flex-shrink: 0; transform: rotate(-90deg); }
+.kicker__ring-track { fill: none; stroke: rgba(191, 255, 71, .22); stroke-width: 3; }
+.kicker__ring-fill {
+  fill: none; stroke: var(--lime); stroke-width: 3; stroke-linecap: round;
+  stroke-dasharray: 50.27;
+  stroke-dashoffset: calc(50.27 * (1 - var(--hold, 0)));
 }
-@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.7); } }
 
 .hed {
   font-size: clamp(40px, 6vw, 84px);
@@ -443,12 +460,13 @@ img, svg, canvas { display: block; }
   background: #141414;
 }
 /* Cover/stack handoff — the cost section pins and sinks back (JS scrubs
-   .numbers__wrap receding) while the Meet Focus intro rises up over it as the
-   reveal. Height-agnostic: because every section is #141414, the cost section
-   pinning shorter than the viewport just exposes Meet Focus's dark top edge —
-   invisible until its content rises in. Desktop + motion-OK only, mirroring the
-   problem-pin gate; touch / reduced-motion get plain stacked scroll. Works
-   because body is overflow-x:clip (not hidden), which preserves sticky. */
+   .numbers__wrap receding) while Meet Focus rises up over it as the reveal.
+   Meet Focus is now a cream iOS-style sheet (see .turn), so its rising top
+   edge is deliberately VISIBLE against this dark section — the receding wrap
+   here is the iOS push-back, the cream panel is the presenting sheet. Desktop
+   + motion-OK only, mirroring the problem-pin gate; touch / reduced-motion get
+   plain stacked scroll. Works because body is overflow-x:clip (not hidden),
+   which preserves sticky. */
 @media (min-width: 861px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
   #numbers { position: sticky; top: 0; }
 }
@@ -489,6 +507,12 @@ img, svg, canvas { display: block; }
   pointer-events: none;
   z-index: 0;
 }
+/* Clusters get their own layer so the silence beat can mute them wholesale
+   (the self-looping cluster timelines reset their own element opacity) */
+.notif-clusters {
+  position: absolute;
+  inset: 0;
+}
 .notif-banner {
   position: absolute;
   display: flex;
@@ -501,6 +525,25 @@ img, svg, canvas { display: block; }
   width: 260px;
   will-change: transform, opacity;
   user-select: none;
+}
+/* Patient zero — the lone first ping, top-centre at full presence */
+.notif-banner--zero {
+  left: calc(50% - 130px);
+  top: 8%;
+  border-color: rgba(255,255,255,0.12);
+}
+/* Grouped stack — a second card peeking beneath, iOS-style */
+.notif-banner.is-stacked::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: -5px;
+  height: 14px;
+  background: rgba(26, 26, 30, 0.72);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 11px;
+  z-index: -1;
 }
 .notif-icon {
   width: 32px;
@@ -763,11 +806,38 @@ img, svg, canvas { display: block; }
 }
 
 /* ── The year, as 12 months ── */
-.numbers__year { max-width: 860px; margin: 0 auto clamp(24px, 2.8vw, 40px); }
+.numbers__year {
+  max-width: 860px; margin: 0 auto clamp(24px, 2.8vw, 40px);
+  transform-style: preserve-3d;
+}
+/* Table-top entrance: the strip tips up on a slight perspective then flattens
+   as it lands — a keynote-style dimensional reveal, pure transform. Overrides
+   the generic .reveal translateY for this element only. */
+.numbers__year.reveal { opacity: 0; transform: perspective(1400px) rotateX(20deg); transform-origin: 50% 120%; }
+.numbers__year.reveal.is-in {
+  opacity: 1; transform: perspective(1400px) rotateX(0deg);
+  transition: opacity .9s var(--ease), transform 1.15s var(--ease);
+}
 .numbers__months {
   position: relative;
   display: flex;
   gap: clamp(4px, 0.7vw, 7px);
+  /* Burn reveal: the year unveils left-to-right as you scroll in (--reveal 0→1,
+     scrubbed in setupCostReveal) so the lime months ignite like a fuse.
+     Defaults to fully shown so no-JS / reduced-motion renders complete. */
+  --reveal: 1;
+  clip-path: inset(0 calc((1 - var(--reveal)) * 100%) 0 0);
+}
+/* Glowing leading edge riding the burn front — peaks mid-sweep, gone at the ends */
+.numbers__months::after {
+  content: '';
+  position: absolute; top: -4px; bottom: -4px;
+  left: calc(var(--reveal) * 100%);
+  width: 2px;
+  background: var(--lime);
+  box-shadow: 0 0 18px 5px rgba(191,255,71,.6);
+  opacity: calc(min(var(--reveal), 1 - var(--reveal)) * 6);
+  pointer-events: none;
 }
 .numbers__month {
   position: relative;
@@ -781,7 +851,9 @@ img, svg, canvas { display: block; }
   position: absolute; left: 0; top: 0; bottom: 0;
   width: calc(var(--fill, 0) * 100%);
   background: linear-gradient(180deg, #E8FF72, var(--lime));
-  transition: width .45s var(--ease);
+  /* Cascade: on slider change the fills re-aim left-to-right via the --i stagger */
+  transition: width .5s var(--ease);
+  transition-delay: calc(var(--i, 0) * 0.035s);
 }
 .numbers__mlabels {
   display: flex;
@@ -799,13 +871,6 @@ img, svg, canvas { display: block; }
 }
 .numbers__mlabel::after { content: attr(data-full); }
 .numbers__mlabel.is-on { color: var(--ink-2); }
-.numbers__caption {
-  font-size: clamp(12px, 1.3vw, 14px);
-  color: var(--ink-3);
-  font-weight: 500;
-  text-align: center;
-  margin: 12px 0 0;
-}
 @media (max-width: 560px) {
   .numbers__mlabel::after { content: attr(data-abbr); }
 }
@@ -831,63 +896,62 @@ img, svg, canvas { display: block; }
 }
 .numbers__moments .lime { font-weight: 700; font-variant-numeric: tabular-nums; }
 
-/* Slider control */
+/* Slider — the interactive close: dial your hours, watch the cost re-aim */
 .numbers__control {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  max-width: 520px;
-}
-.numbers__control-row {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 460px;
+  margin-top: clamp(8px, 1.5vw, 20px);
 }
-.numbers__control-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
+.numbers__control-lead {
+  font-size: clamp(15px, 1.7vw, 19px);
+  font-weight: 500;
+  letter-spacing: -.01em;
+  color: var(--ink-2);
+  text-align: center;
+  margin: 0;
 }
-.numbers__control-val {
-  font-size: 13px;
-  font-weight: 700;
+/* Hero readout — the hours you dial in, large and live */
+.numbers__readout {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   color: var(--lime);
+  line-height: 1;
+  margin: 2px 0 4px;
+}
+.numbers__readout [data-screen] {
+  font-size: clamp(52px, 8vw, 92px);
+  font-weight: 800;
+  letter-spacing: -.04em;
   font-variant-numeric: tabular-nums;
 }
-
-/* Centred closing line — two stacked lines */
-.numbers__bottom {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(7px, 0.9vw, 11px);
-  text-align: center;
-  max-width: min(100%, 620px);
-}
-.numbers__turn {
-  font-size: clamp(18px, 2vw, 22px);
-  font-weight: 500;
-  letter-spacing: -.02em;
-  line-height: 1.3;
-  color: var(--ink-display);
-  margin: 0;
-}
-.numbers__turn-detail {
-  font-size: clamp(13px, 1.4vw, 16px);
+.numbers__readout-unit {
+  font-size: clamp(15px, 1.8vw, 20px);
+  font-weight: 600;
   color: var(--ink-3);
-  font-weight: 400;
-  line-height: 1.4;
-  margin: 0;
+  letter-spacing: -.01em;
+}
+.numbers__ticks {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 11px;   /* roughly aligns marks to thumb-centre travel */
+  margin-top: -6px;
+}
+.numbers__ticks span {
+  width: 1px; height: 6px;
+  background: rgba(255,255,255,.16);
 }
 
 /* Slider */
-.slider { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--lime) 0%, var(--lime) var(--fill,40%), rgba(255,255,255,.1) var(--fill,40%)); cursor: pointer; outline: none; }
-.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--lime); border: 3px solid #0a0e0c; box-shadow: 0 0 0 1px var(--lime), 0 0 18px rgba(191,255,71,.55); cursor: grab; transition: transform .15s var(--ease); }
-.slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.15); }
-.slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--lime); border: 3px solid #0a0e0c; box-shadow: 0 0 0 1px var(--lime), 0 0 18px rgba(191,255,71,.55); cursor: grab; }
+.slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--lime) 0%, var(--lime) var(--fill,40%), rgba(255,255,255,.1) var(--fill,40%)); cursor: pointer; outline: none; }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--lime); border: 4px solid #0a0e0c; box-shadow: 0 0 0 1px var(--lime), 0 0 22px rgba(191,255,71,.6); cursor: grab; transition: transform .15s var(--ease); }
+.slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.18); }
+.slider::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: var(--lime); border: 4px solid #0a0e0c; box-shadow: 0 0 0 1px var(--lime), 0 0 22px rgba(191,255,71,.6); cursor: grab; }
 
 
 /* Mobile */
@@ -2124,7 +2188,38 @@ img, svg, canvas { display: block; }
    A slim band: transparent phone-on-rock cutout spans the full height
    and feathers into the section on every edge; one line of copy sits left.
 ───────────────────────────────────── */
+/* Meet Focus presents like an iOS sheet: a warm paper panel rising over the
+   receding cost section (which already does the iOS push-back). --dock 0→1 is
+   scrubbed by setupMeetFocusSheet as the section travels bottom→top — corners
+   relax flat and the phone's perspective settles exactly as it docks. Defaults
+   to docked (1) so no-JS / reduced-motion render the resting state. */
 .turn {
+  --paper: #F6F3EC;
+  --paper-ink: 20, 20, 20;
+  /* #3F5900 is the same hue as --lime (~75°) at full saturation, just darkened
+     — it reads as "dark lime," not an unrelated green, and holds ~7:1 contrast
+     on cream (true lime is ~1.1:1 there — illegible). setupPaperDim tweens this
+     up to true --lime as the exit dim brightens the page, so the accent
+     transforms back into the traditional brand colour exactly as the dark
+     section arrives, instead of just being a permanently different colour. */
+  --paper-accent: #3F5900;
+  /* The exit is a smooth locked brightness dim, not a boundary. On desktop the
+     stage pins full-screen (sticky, below) and the section's extra height is a
+     scroll runway; setupPaperDim scrubs the surface --from/--to back to #141414
+     (plus ink → light, accent → lime, --paperness → 0) across that runway, with
+     a settle hold at each end — content fully visible before the dim starts,
+     fully dark before the lock releases. The paper *becomes* the dark of the
+     next section, so the seam never exists. The sheet reveal stays a one-off. */
+  --paperness: 1;
+  --dock: 1;
+  position: relative;
+  z-index: 1;
+  /* base surface under the runway — only ever seen once fully dimmed */
+  background: #141414;
+}
+/* The stage holds the whole scene; it locks to the viewport on desktop. */
+.turn__stage {
+  position: relative;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -2132,27 +2227,143 @@ img, svg, canvas { display: block; }
   justify-content: center;
   text-align: center;
   padding: clamp(40px, 5vh, 80px) var(--pad);
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--from) 0%, var(--to) 16%, var(--to) 100%);
+  border-top-left-radius: calc((1 - var(--dock)) * 36px);
+  border-top-right-radius: calc((1 - var(--dock)) * 36px);
 }
-.turn__inner { display: flex; flex-direction: column; align-items: center; max-width: 1000px; margin: 0 auto; }
+/* desktop + motion: the stage pins full-screen (the smooth premium lock); the
+   section's extra height above 100svh is the dim's scroll runway. Native sticky
+   (not a JS pin) so the lock/unlock stays jitter-free, like #problem/#numbers.
+   The composed scene (header + 98svh phone) is taller than the viewport, so the
+   locked stage top-aligns it: the header stays protected and only the phone's
+   transparent dissolved bottom bleeds off the fixed 100svh frame. */
+@media (min-width: 861px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .turn { min-height: 210svh; }
+  .turn__stage {
+    position: sticky; top: 0; height: 100svh; min-height: 0;
+    justify-content: flex-start;
+    padding-top: clamp(44px, 6vh, 84px);
+  }
+}
+/* dot grid — a whisper of print texture on the paper. Masked away from the
+   centre stage so type and the phone sit on clean cream; the dots live at the
+   edges where the eye reads "material", not "pattern". */
+.turn__stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(var(--paper-ink), .18) 1px, transparent 1.4px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(60% 54% at 50% 46%, transparent 34%, #000 82%);
+  mask-image: radial-gradient(60% 54% at 50% 46%, transparent 34%, #000 82%);
+  /* print texture belongs to the paper — it dims away with it */
+  opacity: calc(.5 * var(--paperness, 1));
+}
+/* paper grain — keeps the cream from reading dead-flat and dithers the phone
+   halo (this site banded before; the noise is the fix, not an ornament) */
+.turn__stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: calc(.045 * var(--paperness, 1));
+  mix-blend-mode: multiply;
+}
+.turn__inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; max-width: 1000px; margin: 0 auto; }
 
-.turn__head { margin: 0 auto; font-size: clamp(34px, 5.2vw, 64px); line-height: 1.08; }
+/* ink flip: the site's background colour becomes this section's text */
+.turn .kicker {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: currentColor;
+  color: rgba(var(--paper-ink), .78);
+}
+.turn .kicker__ring-track { stroke: rgba(var(--paper-ink), .16); }
+.turn .kicker__ring-fill  { stroke: var(--paper-accent); }
+.turn .r-scroll .word { color: rgba(var(--paper-ink), 0.15); }
+/* A shimmer gradient (matching the journey headline) needs at least one bright
+   stop to read as "lime" — but any stop bright enough for that washes out
+   contrast on cream. A solid fill in --paper-accent (dark lime, ~7:1 on paper)
+   guarantees legibility at every frame, and needs no animation of its own: the
+   exit dim already tweens --paper-accent up to true --lime, so the word
+   brightens into the traditional brand colour in step with the rest of the
+   page as it dims to dark — the transform lives in the colour itself. */
+.turn .lime { color: var(--paper-accent); }
+.turn .voice {
+  font-weight: 700;
+  color: var(--paper-accent);
+}
+
+.turn__head { margin: 0 auto; font-size: clamp(34px, 5.2vw, 64px); line-height: 1.08; color: rgb(var(--paper-ink)); }
 
 /* the floating phone, centred in the flow — kept at its exact size (98svh)
-   and image; only its placement changes. */
-.turn__media { height: 98svh; margin: clamp(20px, 3vh, 40px) auto; }
-.turn__media img { display: block; height: 100%; width: auto; }
+   and image; only its placement changes. JS scrubs the wrapper's rise
+   (yPercent/rotateX/scale), the img carries the idle bob, so the two motion
+   layers never write the same transform. */
+.turn__media { position: relative; height: 98svh; margin: clamp(20px, 3vh, 40px) auto; }
+.turn__media img { display: block; position: relative; z-index: 1; height: 100%; width: auto; }
+/* ambient halo behind the phone — depth was invisible on dark, it sells here */
+.turn__media::before {
+  content: '';
+  position: absolute;
+  inset: 4% -18% 16% -18%;
+  background: radial-gradient(50% 44% at 50% 40%, rgba(var(--paper-ink), .12), transparent 72%);
+  opacity: var(--dock);
+  pointer-events: none;
+}
+/* landing bloom — the screen lights up once as the sheet docks (JS one-shot) */
+.turn__bloom {
+  position: absolute;
+  left: 50%; top: 30%;
+  width: 74%; aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(255, 252, 238, .95), rgba(255, 252, 238, 0) 70%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .turn__media img { animation: turn-bob 7s ease-in-out infinite alternate; }
+}
+@keyframes turn-bob {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-12px); }
+}
 
-/* supporting line — held to two lines by a wide measure; · separates the halves. */
+/* supporting line — sits over the phone's dissolved lower portion. In the flow
+   (mobile / reduced-motion) a negative margin pulls it up over the phone; in the
+   locked stage it's anchored to the bottom of the fixed frame instead (below),
+   so it can never be clipped by the pin regardless of the phone's height. */
 .turn__sub {
   position: relative;
-  z-index: 1;
-  /* pulled up to sit ~66% down the phone, over its dissolved lower portion */
-  margin: -36svh auto 0;
+  z-index: 3;
+  margin: -32svh auto 0;
   max-width: 740px;
   font-size: clamp(15px, 1.5vw, 17px);
   line-height: 1.6;
-  color: var(--ink-2);
+  color: rgba(var(--paper-ink), .64);
   text-wrap: balance;
+}
+/* locked stage: anchor the sub to the bottom of the visible frame. Centred via
+   auto margins (not transform) so the .reveal translateY animation stays free.
+   Held close to the true bottom edge — this is a caption for the phone, not a
+   second block of copy competing with it for the frame. */
+@media (min-width: 861px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .turn__sub {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: clamp(6px, 1.2vh, 14px);
+    margin: 0 auto;
+    width: min(740px, 86%);
+  }
 }
 
 @media (max-width: 860px) {
@@ -2175,22 +2386,6 @@ img, svg, canvas { display: block; }
   padding: clamp(90px, 12vh, 150px) var(--pad) clamp(50px, 7vh, 90px);
   text-align: center;
 }
-/* Giant brand arc behind the closing CTA — solid faint stroke (no gradients,
-   no filters → no banding, no extra compositing). The slow spin is a single
-   transform-only animation on one element. */
-.get__arc {
-  position: absolute; left: 50%; top: 50%; z-index: 0;
-  width: min(94vw, 900px); height: auto; aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  opacity: .05;
-  pointer-events: none;
-  animation: get-arc-spin 90s linear infinite;
-}
-@keyframes get-arc-spin {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
-}
-@media (prefers-reduced-motion: reduce) { .get__arc { animation: none; } }
 .get__inner { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; }
 .get__title {
   margin: 0 auto 24px;

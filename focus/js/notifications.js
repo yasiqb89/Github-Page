@@ -2,7 +2,12 @@
 //
 //   Layer 2 — iMessage clusters (animated typing → message → loop)
 //   Layer 3 — iOS notification banners (real icons, depth system)
-//   Layer 4 — Mini phone mockup with scrolling video feed
+//
+// The layer is a narrative actor, not wallpaper: its intensity is keyed to the
+// manifesto's word-fill beats. One lone ping while "not weak" fills, the swarm
+// bursts in on "environment is loud", peaks through "engineered to win", and
+// dies to silence as "the problem was never you." lands — the first wordless
+// demo of what Focus does.
 //
 // (The numbers section's old app-icon ghost grid was removed in favour of a
 //  static CSS glow; initNumbersGrid is now a no-op.)
@@ -91,6 +96,14 @@ const SLOTS = [
   { x: '35%', y: '91%', depth: 0.82 },  // bright, bottom-centre
 ];
 
+// Narrative beats in section-hold progress. The word-fill completes at 80% of
+// the hold (main.js), so the manifesto's line boundaries land at .20 / .36 /
+// .60 / .80. Silence triggers at .78 — just as "you." finishes filling.
+const BEAT_LOUD    = 0.20; // "Your environment is loud."   → the swarm arrives
+const BEAT_PEAK    = 0.36; // "Every ping is engineered…"   → peak aggression
+const BEAT_SILENCE = 0.78; // "The problem was never you."  → the noise dies
+
+const beatFor = (p) => (p < BEAT_LOUD ? 0 : p < BEAT_PEAK ? 1 : p < BEAT_SILENCE ? 2 : 3);
 
 // ─── Problem section entry point ─────────────────────────────────────────────
 export function initNotifications(section) {
@@ -100,45 +113,23 @@ export function initNotifications(section) {
   const container = section.querySelector('.problem__noise');
   if (!container) return;
 
-  // Build the ambient layer up-front, but hold playback until the section
-  // locks (its sticky child reaches the top of the viewport) so the noise
-  // reveals as a deliberate beat instead of pre-playing on the way in.
   gsap.set(container, { opacity: 0 });
-  const playClusters = buildMessageClusters(container);
-  const banners = startBannerLoop(container);
+  const field = createNoiseField(container, section);
 
-  // Desktop holds the section via .problem--scroll → trigger on the lock.
-  // Without the hold (mobile/touch) fall back to revealing on entry.
+  // Desktop holds the section via .problem--scroll → beats scrub off the lock.
+  // Without the hold (mobile/touch) there is no beat timeline: reveal a steady
+  // mid-intensity field on entry instead.
   const hasHold = section.classList.contains('problem--scroll');
-  let revealed = false;
-
-  // Show the noise layer + run the banner drip. First time also kicks off the
-  // looping iMessage clusters (they self-loop thereafter, hidden when the layer
-  // fades out).
-  const show = () => {
-    banners.start();
-    gsap.to(container, { opacity: 1, duration: revealed ? 0.45 : 0.7, ease: 'power2.out' });
-    if (revealed) return;
-    revealed = true;
-    playClusters.forEach((play, i) => play(i * 1.1));
-  };
-
-  // Leaving the section (either direction): stop spawning AND fade the whole
-  // layer out, so no banners/clusters linger over the hero or numbers section.
-  const hide = () => {
-    banners.stop();
-    gsap.to(container, { opacity: 0, duration: 0.4, ease: 'power2.out' });
-  };
 
   ScrollTrigger.create({
     trigger: section,
     start: hasHold ? 'top top'       : 'top 65%',
     end:   hasHold ? 'bottom bottom' : 'bottom 35%',
-    onEnter:      show,
-    onEnterBack:  show,
-    onLeave:      hide,
-    onLeaveBack:  hide,
-    onUpdate:     hasHold ? (self) => { if (revealed) banners.setRate(self.progress); } : undefined,
+    onEnter:      () => field.show(hasHold ? undefined : 1),
+    onEnterBack:  () => field.show(hasHold ? undefined : 1),
+    onLeave:      () => field.hide(),
+    onLeaveBack:  () => field.hide(),
+    onUpdate:     hasHold ? (self) => field.setProgress(self.progress) : undefined,
   });
 }
 
@@ -147,6 +138,265 @@ export function initNotifications(section) {
 // static on-brand glow (.numbers::before) for depth instead. Kept as a no-op so
 // the call site in main.js stays stable.
 export function initNumbersGrid() {}
+
+// ─── The noise field ─────────────────────────────────────────────────────────
+// Owns every moving part of the layer: the banner swarm, the patient-zero ping,
+// the iMessage clusters, pointer repulsion and depth parallax. Driven by beats.
+function createNoiseField(container, section) {
+  const canHover = matchMedia('(min-width: 861px) and (hover: hover)').matches;
+
+  // Clusters live in their own layer so silence can mute them wholesale
+  // without fighting the self-looping cluster timelines (which reset their
+  // own element opacity every cycle).
+  const clusterLayer = document.createElement('div');
+  clusterLayer.className = 'notif-clusters';
+  container.appendChild(clusterLayer);
+  const playClusters = buildMessageClusters(clusterLayer);
+  let clustersStarted = false;
+
+  const live = new Set();       // { el, depth, p0, bx, by, rx, ry, slot }
+  const usedSlots = new Set();
+  let appIdx = 0, previewIdx = 0;
+  let loop = null, burstTimers = [];
+  let beat = -1;                // -1 = layer hidden; forces re-apply on show
+  let progress = 0;
+  let boost = 0;                // opacity lift as the beats build (0 → 0.3)
+  let zero = null;              // the patient-zero record, when on stage
+  let visible = false;
+
+  // ── pointer repulsion + depth parallax (one rAF, ~15 elements) ──
+  let mx = -1e4, my = -1e4, raf = null;
+  if (canHover) {
+    section.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; });
+    section.addEventListener('mouseleave', () => { mx = -1e4; my = -1e4; });
+  }
+
+  function tick() {
+    live.forEach((rec) => {
+      // parallax: banners drift upward through the hold, far ones slower —
+      // the flat collage becomes a volume
+      const par = -Math.max(0, progress - rec.p0) * 90 * rec.depth;
+      let tx = 0, ty = 0;
+      if (rec.bx) {
+        // repulsion: the noise recoils from the pointer, near banners more
+        const dx = rec.bx - mx;
+        const dy = rec.by + par - my;
+        const d  = Math.hypot(dx, dy);
+        const R  = 190;
+        if (d < R && d > 0.001) {
+          const f = (1 - d / R) * (0.35 + 0.65 * rec.depth) * 26;
+          tx = (dx / d) * f;
+          ty = (dy / d) * f;
+        }
+      }
+      rec.rx += (tx - rec.rx) * 0.12;
+      rec.ry += (ty - rec.ry) * 0.12;
+      // CSS `translate` composes with gsap's `transform` — entry/exit tweens
+      // and the drift never fight over the same property
+      rec.el.style.translate = `${rec.rx.toFixed(2)}px ${(rec.ry + par).toFixed(2)}px`;
+    });
+    raf = requestAnimationFrame(tick);
+  }
+
+  // ── banner construction ──
+  function buildBanner(app, text, time) {
+    const borderStyle = app.border ? 'outline:1px solid rgba(255,255,255,0.2);' : '';
+    const el = document.createElement('div');
+    el.className = 'notif-banner';
+    el.innerHTML = `
+      <div class="notif-icon" style="background:${app.color};${borderStyle}">
+        <img src="https://cdn.simpleicons.org/${app.slug}/ffffff"
+             width="18" height="18" alt="" aria-hidden="true"
+             onerror="this.style.display='none'" />
+      </div>
+      <div class="notif-body">
+        <span class="notif-app">${app.name}</span>
+        <span class="notif-text">${text}</span>
+      </div>
+      <span class="notif-time">${time}</span>
+    `;
+    return el;
+  }
+
+  function removeBanner(rec) {
+    rec.el.remove();
+    live.delete(rec);
+    if (rec.slot !== null) usedSlots.delete(rec.slot);
+    if (zero === rec) zero = null;
+  }
+
+  function measure(rec) {
+    const r = rec.el.getBoundingClientRect();
+    rec.bx = r.left + r.width / 2;
+    rec.by = r.top + r.height / 2;
+  }
+
+  function freeSlot() {
+    const free = [];
+    SLOTS.forEach((_, i) => { if (!usedSlots.has(i)) free.push(i); });
+    if (!free.length) return null;
+    return free[Math.floor(Math.random() * free.length)];
+  }
+
+  // ── the swarm ──
+  function spawn() {
+    const idx = freeSlot();
+    if (idx === null) return;
+    usedSlots.add(idx);
+
+    const { x, y, depth } = SLOTS[idx];
+    const app          = APPS[appIdx % APPS.length];
+    const [text, time] = PREVIEWS[previewIdx % PREVIEWS.length];
+    appIdx++; previewIdx++;
+
+    const el = buildBanner(app, text, time);
+    el.style.left = x;
+    el.style.top  = y;
+    const scale = 0.76 + depth * 0.24;             // 0.76 (far) → 1.00 (near)
+    const blur  = depth < 0.55 ? (0.55 - depth) * 3.5 : 0;
+    if (blur > 0) el.style.filter = `blur(${blur.toFixed(2)}px)`;
+    // near banners occasionally arrive as a grouped stack — a second card
+    // peeking beneath, the way iOS collapses repeat offenders
+    if (depth > 0.72 && Math.random() < 0.3) el.classList.add('is-stacked');
+    container.appendChild(el);
+
+    const rec = { el, depth, p0: progress, bx: 0, by: 0, rx: 0, ry: 0, slot: idx };
+    live.add(rec);
+
+    const targetOpacity = (0.07 + depth * 0.21) * (1 + boost);
+    // spring in with slight overshoot, dwell, then swipe-dismiss upward —
+    // matching the physics people feel from the real thing 200× a day
+    gsap.set(el, { scale, transformOrigin: 'top left', y: -14, opacity: 0 });
+    gsap.to(el, {
+      y: 0, opacity: targetOpacity,
+      duration: 0.55, ease: 'back.out(2.2)',
+      onComplete() {
+        measure(rec);
+        gsap.to(el, {
+          y: -16, opacity: 0,
+          delay: 3.5, duration: 0.3, ease: 'power2.in',
+          onComplete: () => removeBanner(rec),
+        });
+      },
+    });
+  }
+
+  function drip(ms) {
+    if (loop) clearInterval(loop);
+    loop = setInterval(spawn, ms);
+  }
+
+  function stopDrip() {
+    if (loop) { clearInterval(loop); loop = null; }
+    burstTimers.forEach(clearTimeout);
+    burstTimers = [];
+  }
+
+  // Every live banner swipe-dismisses upward in a fast stagger — the noise
+  // dying is the section's payoff, so it exits like a deliberate act.
+  function sweep() {
+    let i = 0;
+    live.forEach((rec) => {
+      gsap.killTweensOf(rec.el);
+      gsap.to(rec.el, {
+        y: -18, opacity: 0,
+        duration: 0.3, delay: i * 0.05, ease: 'power2.in',
+        onComplete: () => removeBanner(rec),
+      });
+      i++;
+    });
+  }
+
+  // ── patient zero — one lone ping before the swarm ──
+  function spawnZero() {
+    if (zero) return;
+    const el = buildBanner(APPS[0], PREVIEWS[0][0], 'now');
+    el.classList.add('notif-banner--zero');
+    container.appendChild(el);
+    const rec = { el, depth: 1, p0: progress, bx: 0, by: 0, rx: 0, ry: 0, slot: null };
+    zero = rec;
+    live.add(rec);
+    gsap.set(el, { y: -18, opacity: 0, scale: 1, transformOrigin: 'top center' });
+    gsap.to(el, {
+      y: 0, opacity: 0.95,
+      delay: 0.35, duration: 0.6, ease: 'back.out(1.9)',
+      onComplete: () => measure(rec),
+    });
+  }
+
+  function dismissZero() {
+    if (!zero) return;
+    const rec = zero;
+    zero = null;
+    gsap.killTweensOf(rec.el);
+    gsap.to(rec.el, {
+      y: -18, opacity: 0,
+      duration: 0.32, ease: 'power2.in',
+      onComplete: () => removeBanner(rec),
+    });
+  }
+
+  // ── beats ──
+  //   0  "not weak"            near-silence; one lone ping
+  //   1  "environment is loud" the swarm bursts in, steady drip
+  //   2  "engineered to win"   peak: fast drip, brighter banners
+  //   3  "never you."          silence — everything sweeps away
+  function setBeat(b) {
+    if (b === beat) return;
+    const prev = beat;
+    beat = b;
+
+    if (b === 0) {
+      stopDrip();
+      if (prev > 0) sweep();
+      boost = 0;
+      spawnZero();
+      gsap.to(clusterLayer, { opacity: 0, duration: 0.4 });
+    } else if (b === 1 || b === 2) {
+      dismissZero();
+      boost = b === 1 ? 0.12 : 0.3;
+      if (!clustersStarted) {
+        clustersStarted = true;
+        playClusters.forEach((play, i) => play(i * 1.1));
+      }
+      gsap.to(clusterLayer, { opacity: 1, duration: 0.5 });
+      stopDrip();
+      // burst-populate when arriving at an empty stage (fresh entry, or
+      // scrolling back up out of the silence)
+      if (live.size < 3) {
+        for (let i = 0; i < 7; i++) burstTimers.push(setTimeout(spawn, i * 150));
+      }
+      drip(b === 1 ? 1050 : 460);
+    } else {
+      stopDrip();
+      dismissZero();
+      sweep();
+      gsap.to(clusterLayer, { opacity: 0, duration: 0.7, ease: 'power2.inOut' });
+    }
+  }
+
+  return {
+    show(forceBeat) {
+      visible = true;
+      gsap.killTweensOf(container);
+      gsap.to(container, { opacity: 1, duration: 0.6, ease: 'power2.out' });
+      setBeat(forceBeat ?? beatFor(progress));
+      if (!raf) raf = requestAnimationFrame(tick);
+    },
+    hide() {
+      visible = false;
+      beat = -1; // force the beat to re-apply (and its drip to restart) on return
+      stopDrip();
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      gsap.killTweensOf(container);
+      gsap.to(container, { opacity: 0, duration: 0.4, ease: 'power2.out' });
+    },
+    setProgress(p) {
+      progress = p;
+      if (visible) setBeat(beatFor(p));
+    },
+  };
+}
 
 // ─── Layer 2: Animated iMessage clusters ─────────────────────────────────────
 function buildMessageClusters(container) {
@@ -161,17 +411,25 @@ function buildMessageClusters(container) {
     const typing = document.createElement('div');
     typing.className = 'notif-typing is-recv';
     typing.innerHTML = '<span></span><span></span><span></span>';
+    // Hidden from the instant it exists in the DOM — animateCluster() only sets
+    // this to 0 on its first *play*, which is held until the loud beat. Without
+    // this, .notif-bubble has no CSS opacity of its own (defaults to fully
+    // visible) and .notif-messages sits at a dim-but-nonzero 0.18, so the raw
+    // text flashes through as soon as the container fades in at beat 0 — before
+    // the deliberately-delayed patient-zero ping even appears.
+    gsap.set(typing, { opacity: 0 });
     cluster.appendChild(typing);
 
     messages.forEach(({ text, sent }) => {
       const b = document.createElement('div');
       b.className   = `notif-bubble ${sent ? 'is-sent' : 'is-recv'}`;
       b.textContent = text;
+      gsap.set(b, { opacity: 0 });
       cluster.appendChild(b);
     });
 
     container.appendChild(cluster);
-    // Held until the section locks — caller starts each with a small stagger.
+    // Held until the loud beat — caller starts each with a small stagger.
     starts.push((delay) => animateCluster(cluster, delay));
   });
   return starts;
@@ -212,99 +470,4 @@ function animateCluster(cluster, startDelay) {
       gsap.set(typing,  { opacity: 0 });
       animateCluster(cluster, 1.0);
     });
-}
-
-// ─── Layer 3: Notification banners with depth ──────────────────────────────────
-function startBannerLoop(container) {
-  const usedSlots = new Set();
-  let appIdx = 0, previewIdx = 0, loop = null;
-  let burstTimers = [];   // pending burst spawns, so stop() can cancel them too
-  let intensityBoost = 0; // 0 at lock → 0.3 at section end (scrubbed by progress)
-
-  function freeSlot() {
-    const free = [];
-    SLOTS.forEach((_, i) => { if (!usedSlots.has(i)) free.push(i); });
-    if (!free.length) return null;
-    return free[Math.floor(Math.random() * free.length)];
-  }
-
-  function spawn() {
-    const idx = freeSlot();
-    if (idx === null) return;
-    usedSlots.add(idx);
-
-    const { x, y, depth } = SLOTS[idx];
-    const app          = APPS[appIdx % APPS.length];
-    const [text, time] = PREVIEWS[previewIdx % PREVIEWS.length];
-    appIdx++; previewIdx++;
-
-    // Depth-derived visual properties — wider range for more visible contrast.
-    // intensityBoost scrubs up as the section progresses (0 → 0.3), so banners
-    // grow slightly more opaque as the problem beats build.
-    const targetOpacity = (0.07 + depth * 0.21) * (1 + intensityBoost); // 0.13→0.28 → up to 0.17→0.36
-    const scale         = 0.76 + depth * 0.24;           // 0.76 (far) → 1.00 (near)
-    const blur          = depth < 0.55 ? (0.55 - depth) * 3.5 : 0;
-
-    const borderStyle = app.border ? 'outline:1px solid rgba(255,255,255,0.2);' : '';
-
-    const el = document.createElement('div');
-    el.className         = 'notif-banner';
-    el.style.left        = x;
-    el.style.top         = y;
-    el.style.transform   = `scale(${scale.toFixed(3)})`;
-    el.style.transformOrigin = 'top left';
-    if (blur > 0) el.style.filter = `blur(${blur.toFixed(2)}px)`;
-
-    el.innerHTML = `
-      <div class="notif-icon" style="background:${app.color};${borderStyle}">
-        <img src="https://cdn.simpleicons.org/${app.slug}/ffffff"
-             width="18" height="18" alt="" aria-hidden="true"
-             onerror="this.style.display='none'" />
-      </div>
-      <div class="notif-body">
-        <span class="notif-app">${app.name}</span>
-        <span class="notif-text">${text}</span>
-      </div>
-      <span class="notif-time">${time}</span>
-    `;
-    container.appendChild(el);
-
-    gsap.fromTo(el, { opacity: 0, y: -8 }, {
-      opacity: targetOpacity, y: 0,
-      duration: 0.42, ease: 'power3.out',   // faster entry, stronger snap
-      onComplete() {
-        gsap.to(el, {
-          opacity: 0, y: -7,
-          delay: 3.5, duration: 0.32, ease: 'power2.out', // exit snaps away faster
-          onComplete() { el.remove(); usedSlots.delete(idx); },
-        });
-      },
-    });
-  }
-
-  return {
-    start() {
-      if (loop) return;
-      // Burst-populate so the scene feels alive the instant the section locks
-      // (160ms stagger), then keep a steady drip. Track the burst timers so
-      // stop() can cancel any that haven't fired yet (otherwise they keep
-      // spawning after the section leaves — visible when scrolling back up).
-      burstTimers = [];
-      for (let i = 0; i < 7; i++) burstTimers.push(setTimeout(spawn, i * 160));
-      loop = setInterval(spawn, 1100);
-    },
-    stop() {
-      if (loop) { clearInterval(loop); loop = null; }
-      burstTimers.forEach(clearTimeout);
-      burstTimers = [];
-    },
-    // Scrub intensity as the user holds through the section (progress 0→1).
-    // Spawn interval shrinks 1100ms → 480ms; banners also grow slightly more opaque.
-    setRate(t) {
-      intensityBoost = t * 0.30;
-      if (!loop) return;
-      clearInterval(loop);
-      loop = setInterval(spawn, Math.round(1100 - t * 620));
-    },
-  };
 }

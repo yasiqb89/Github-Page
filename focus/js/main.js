@@ -51,9 +51,11 @@ async function init() {
 
   initMagnetic();
   setupAnchors();
+  setupKickerRings();
   setupReveals();
   setupScrollHeadlines();
   setupSlider();
+  setupCostReveal();
   setupProblemReveal();
   setupModes();
   setupModeInteractions();
@@ -75,7 +77,13 @@ async function init() {
   revealHero();
   setupHeroAtmosphere();
   setupMeetFocusHandoff();
+  setupMeetFocusSheet();
+  setupPaperDim();
   ScrollTrigger.refresh();
+  // Webfonts (font-display: swap) can still be in flight here — a late swap
+  // reflows text and staggers every cached trigger boundary sitewide. Re-measure
+  // once they settle so nothing jitters into place mid-scroll.
+  document.fonts?.ready.then(() => ScrollTrigger.refresh());
 }
 
 // ─── hero atmosphere — dissolve grid + glow as the hero scrolls away ──
@@ -116,6 +124,92 @@ function setupMeetFocusHandoff() {
     ease: 'none',
     scrollTrigger: { trigger: numbers, start: 'top top', end: 'bottom top', scrub: true },
   });
+}
+
+// ─── Meet Focus — the iOS-sheet presentation ────────────────
+// The cream section rises like an iOS sheet over the receding cost section:
+// --dock (0→1 across the rise) relaxes the sheet's top corners flat and fades
+// the phone's halo in; the phone itself travels with mass — arriving a beat
+// behind the sheet on a flattening perspective — and the screen blooms once as
+// everything docks. Runs on touch too (the corner/perspective read works as a
+// plain scroll reveal without the cover); reduced-motion gets the resting state.
+function setupMeetFocusSheet() {
+  const turn = document.getElementById('turn');
+  if (!turn) return;
+
+  // nav flips to its paper variant while the cream sheet is under it. 'center
+  // center' is the exit dim's midpoint (the section pins full-screen, so its
+  // centre reaching the viewport centre is ~50% through the runway), so the
+  // chrome flips back to dark exactly as the surface crosses from light to dark.
+  ScrollTrigger.create({
+    trigger: turn, start: 'top 66px', end: 'center center',
+    toggleClass: { targets: '#nav', className: 'nav--paper' },
+  });
+
+  if (reduced) return; // CSS default --dock:1 renders the docked state
+
+  turn.style.setProperty('--dock', '0');
+  const setDock = (self) => turn.style.setProperty('--dock', self.progress.toFixed(4));
+  ScrollTrigger.create({
+    trigger: turn, start: 'top bottom', end: 'top top', scrub: true,
+    onUpdate: setDock, onRefresh: setDock,
+  });
+
+  const media = turn.querySelector('.turn__media');
+  if (media) {
+    gsap.fromTo(media,
+      { yPercent: 12, rotateX: 14, scale: 0.95 },
+      {
+        yPercent: 0, rotateX: 0, scale: 1, ease: 'none',
+        transformPerspective: 1400, transformOrigin: '50% 100%',
+        scrollTrigger: { trigger: turn, start: 'top bottom', end: 'top top', scrub: true },
+      });
+  }
+
+  const bloom = turn.querySelector('.turn__bloom');
+  if (bloom) {
+    ScrollTrigger.create({
+      trigger: turn, start: 'top 12%', once: true,
+      onEnter: () => gsap.timeline()
+        .to(bloom, { opacity: 0.5, duration: 0.45, ease: 'power2.out' })
+        .to(bloom, { opacity: 0, duration: 1.2, ease: 'power2.inOut' }),
+    });
+  }
+}
+
+// ─── paper → Inside Focus: the locked brightness dim ────────
+// The exit is not a boundary — the paper itself dims, like screen brightness
+// turning down. On desktop the stage pins full-screen (CSS sticky) and the
+// section's extra height is a scroll runway; this timeline scrubs across that
+// runway with a settle hold at each end: content sits fully visible before the
+// dim starts, and reaches full dark before the lock releases. The surface goes
+// #141414, the ink flips to light, the texture fades, and --paper-accent
+// brightens from dark lime (readable on paper) to true brand lime — "meant to"
+// transforms into the traditional colour exactly as the dark section arrives.
+// Everything else is CSS-var-driven (surface, the ink triplet used in every
+// rgba(), halo, dots, painted headline words via data-sr-ink), so one timeline
+// dims the whole world in step. By the time the dark Inside Focus section
+// arrives, dark meets dark — no seam.
+function setupPaperDim() {
+  const turn = document.getElementById('turn');
+  if (!turn || reduced) return;
+
+  const locked = matchMedia('(min-width: 861px) and (hover: hover)').matches;
+  // locked: scrub across the pin runway (top top → bottom bottom of the tall
+  // region). free (touch): scrub as the section leaves, no lock.
+  const trigger = locked
+    ? { trigger: turn, start: 'top top', end: 'bottom bottom', scrub: 0.5 }
+    : { trigger: turn, start: 'top top', end: 'bottom top', scrub: 0.5 };
+
+  const tl = gsap.timeline({ scrollTrigger: trigger });
+  tl.to({}, { duration: locked ? 0.12 : 0.04 });   // settle — fully visible first
+  tl.to(turn, {
+    '--from': '#141414', '--to': '#141414',
+    '--paper-ink': '235, 238, 242',
+    '--paper-accent': '#BFFF47',
+    '--paperness': 0, ease: 'none', duration: locked ? 0.76 : 0.92,
+  });
+  if (locked) tl.to({}, { duration: 0.12 });        // hold full-dark before release
 }
 
 // ─── anchor scroll — Lenis when available, fallback otherwise ──
@@ -178,8 +272,12 @@ function setupProblemReveal() {
   // Start everything dim.
   allWords.forEach((w) => paint(w, 0.18));
 
-  // Skip animation for reduced motion — just show full colour.
-  if (reduced) { allWords.forEach((w) => paint(w, 1)); return; }
+  // Skip animation for reduced motion — full colour, hold ring complete.
+  if (reduced) {
+    allWords.forEach((w) => paint(w, 1));
+    section.style.setProperty('--hold', 1);
+    return;
+  }
 
   // Kicker fades in as the section approaches.
   gsap.fromTo('.problem__kicker',
@@ -194,7 +292,10 @@ function setupProblemReveal() {
   if (!canHold) {
     ScrollTrigger.create({
       trigger: section, start: 'top 78%', end: 'top 12%', scrub: 1,
-      onUpdate: (self) => fill(self.progress),
+      onUpdate: (self) => {
+        fill(self.progress);
+        section.style.setProperty('--hold', self.progress.toFixed(4));
+      },
     });
     return;
   }
@@ -209,12 +310,44 @@ function setupProblemReveal() {
     start: 'top top',
     end: 'bottom bottom',
     invalidateOnRefresh: true,
-    onUpdate: (self) => fill(Math.min(1, self.progress / 0.8)),
+    onUpdate: (self) => {
+      const p = Math.min(1, self.progress / 0.8);
+      fill(p);
+      // hold-progress cue: the kicker's ring fills as the manifesto fills,
+      // telegraphing how long the pin lasts (see .problem__holdring)
+      section.style.setProperty('--hold', p.toFixed(4));
+    },
   });
 }
 
 // (life-in-days grid removed — the cost section now renders a 12-month strip,
 //  driven by the slider in setupSlider below.)
+
+// ─── kicker hold-progress rings ─────────────────────────────
+// Every kicker's pulsing dot becomes a ring that fills as the eyebrow rises
+// into reading position — the same cue the problem section uses for its pin,
+// applied sitewide. The problem kicker (.problem__kicker) already carries its
+// ring in markup and is driven by its pin scrub in setupProblemReveal, so it's
+// intentionally excluded from this generic .kicker pass.
+function setupKickerRings() {
+  const RING =
+    '<svg class="kicker__ring" viewBox="0 0 20 20" aria-hidden="true">' +
+    '<circle class="kicker__ring-track" cx="10" cy="10" r="8"/>' +
+    '<circle class="kicker__ring-fill" cx="10" cy="10" r="8"/></svg>';
+  document.querySelectorAll('.kicker').forEach((kicker) => {
+    kicker.insertAdjacentHTML('afterbegin', RING);
+    // --hold is set on the kicker itself and inherits down to the ring, so each
+    // ring tracks its own eyebrow with no cross-section interference.
+    if (reduced) { kicker.style.setProperty('--hold', 1); return; }
+    ScrollTrigger.create({
+      trigger: kicker,
+      start: 'top bottom',   // eyebrow enters from the bottom edge
+      end: 'top 35%',        // ring completes as it settles into reading position
+      scrub: true,
+      onUpdate: (self) => kicker.style.setProperty('--hold', self.progress.toFixed(4)),
+    });
+  });
+}
 
 // ─── reveal-on-enter system ─────────────────────────────────
 function setupReveals() {
@@ -227,7 +360,10 @@ function setupReveals() {
 function setupScrollHeadlines() {
   document.querySelectorAll('[data-scroll-reveal]').forEach((el) => {
     const words = splitWords(el);
-    if (reduced) { words.forEach((w) => { w.style.color = 'rgba(230,235,241,1)'; const lime = w.querySelector('.lime'); if (lime) lime.style.opacity = '1'; }); return; }
+    // Fill colour is white-ink by default; light sections override via
+    // data-sr-ink="r,g,b" (e.g. the cream Meet Focus sheet fills in dark ink).
+    const ink = el.dataset.srInk || '230,235,241';
+    if (reduced) { words.forEach((w) => { w.style.color = `rgba(${ink},1)`; const lime = w.querySelector('.lime'); if (lime) lime.style.opacity = '1'; }); return; }
 
     // Optional: drive this element's fill off another element's scroll position
     // (data-sr-trigger) so two headlines reveal in sync — e.g. the cost-section
@@ -253,7 +389,7 @@ function setupScrollHeadlines() {
             // words this looks identical to fading the colour alpha.
             lime.style.opacity = a;
           } else {
-            w.style.color = `rgba(230,235,241,${a})`;
+            w.style.color = `rgba(${ink},${a})`;
           }
         });
       },
@@ -297,6 +433,19 @@ function splitWords(el) {
 }
 
 // ─── interactive numbers slider ─────────────────────────────
+// Rolling number — tweens an element's integer text from its current value to
+// `to`, so derived costs count rather than snap. Reuses one proxy per element
+// and overwrites in-flight tweens so rapid slider drags stay responsive.
+function rollNum(el, to, dur = 0.5, delay = 0) {
+  if (!el) return;
+  if (reduced) { el.textContent = to; return; }
+  const o = el._roll || (el._roll = { v: parseFloat(el.textContent) || 0 });
+  gsap.to(o, {
+    v: to, duration: dur, delay, ease: 'power2.out', overwrite: true,
+    onUpdate: () => { el.textContent = Math.round(o.v); },
+  });
+}
+
 function setupSlider() {
   const slider    = document.getElementById('screenSlider');
   if (!slider) return;
@@ -304,59 +453,114 @@ function setupSlider() {
   const elLost    = document.querySelector('[data-days-lost]');
   const boxes     = [...document.querySelectorAll('.numbers__month')];
   const mlabels   = [...document.querySelectorAll('.numbers__mlabel')];
-  const momEl     = document.querySelector('[data-moments]');
+  const elDinners = document.querySelector('[data-dinners]');
+  const elGym     = document.querySelector('[data-gym]');
+  const elDeep    = document.querySelector('[data-deep]');
   const yearEl    = document.querySelector('[data-year]');
   const liveEl    = document.querySelector('[data-slider-live]');
   let liveTimer   = 0;
+
+  // Static per-box index drives the left-to-right cascade stagger (CSS --i).
+  boxes.forEach((box, i) => box.style.setProperty('--i', i));
 
   const fmtH = (h) => {
     const v = Math.round(h * 2) / 2;
     return v % 1 === 0 ? String(v | 0) : v.toFixed(1);
   };
 
-  function renderAt(h, announce) {
-    const pct     = ((h - +slider.min) / (+slider.max - +slider.min)) * 100;
+  function renderAt(h, announce, animate) {
+    const pct = ((h - +slider.min) / (+slider.max - +slider.min)) * 100;
     slider.style.setProperty('--fill', `${pct}%`);
+    // Hours is the direct input — update instantly. Never animate direct
+    // manipulation; the derived consequences below are what ripple.
     if (elScreen) elScreen.textContent = fmtH(h);
-    const lost = Math.round((h * 365) / 24);
-    if (elLost) elLost.textContent = lost;
 
-    // The year, by the month: each box fills with the time the screen takes —
-    // whole months fill solid, the current month fills part-way (days-accurate).
-    const DPM = 365 / 12; // ~30.4 days per month-box
+    const lost   = Math.round((h * 365) / 24);
+    const DPM    = 365 / 12; // ~30.4 days per month-box
     const months = Math.round(lost / DPM);
+
+    // The year, by the month: each box fills with the time the screen takes.
+    // Re-aiming --fill lets the CSS width transition + --i stagger cascade the
+    // change left-to-right instead of snapping every box at once.
     boxes.forEach((box, i) => {
       const frac = Math.max(0, Math.min(1, (lost - i * DPM) / DPM));
       box.style.setProperty('--fill', frac.toFixed(4));
     });
     mlabels.forEach((l, i) => l.classList.toggle('is-on', i < months));
 
-    // Break the whole year's loss into moments that add up to the total: the
-    // three counts sum to `lost` (deep work takes the remainder).
-    if (momEl) {
-      const dinners = Math.round(lost * 0.45);
-      const gym     = Math.round(lost * 0.30);
-      const deep    = Math.max(0, lost - dinners - gym);
-      momEl.innerHTML =
-        `Enough for <span class="lime">${dinners}</span> family dinners, ` +
-        `<span class="lime">${gym}</span> gym sessions, and ` +
-        `<span class="lime">${deep}</span> days of deep work.`;
+    // The three moments always sum to `lost` (deep work takes the remainder).
+    const dinners = Math.round(lost * 0.45);
+    const gym     = Math.round(lost * 0.30);
+    const deep    = Math.max(0, lost - dinners - gym);
+    if (animate) {
+      // Cause → effect: the headline cost rolls first, the moments ripple after.
+      rollNum(elLost, lost, 0.4);
+      rollNum(elDinners, dinners, 0.5, 0.08);
+      rollNum(elGym, gym, 0.5, 0.12);
+      rollNum(elDeep, deep, 0.5, 0.16);
+    } else {
+      if (elLost) elLost.textContent = lost;
+      if (elDinners) elDinners.textContent = dinners;
+      if (elGym) elGym.textContent = gym;
+      if (elDeep) elDeep.textContent = deep;
     }
+
     const summary = `At ${fmtH(h)} hours a day, about ${lost} days a year — roughly ${months} ${months === 1 ? 'month' : 'months'} — go to the screen.`;
     yearEl?.setAttribute('aria-label', summary);
 
     // Announce the derived total to screen readers on user-driven changes only
-    // (not the initial render) — debounced so a screen reader doesn't narrate
-    // every intermediate step while the slider is actively being dragged,
-    // only the value it settles on.
+    // (not the initial render) — debounced so a screen reader narrates only the
+    // value the slider settles on, not every intermediate drag step.
     if (liveEl && announce) {
       clearTimeout(liveTimer);
       liveTimer = setTimeout(() => { liveEl.textContent = summary; }, 500);
     }
   }
 
-  slider.addEventListener('input', () => renderAt(parseFloat(slider.value), true));
-  renderAt(7, false);
+  slider.addEventListener('input', () => renderAt(parseFloat(slider.value), true, true));
+  renderAt(7, false, false);
+}
+
+// ─── cost section: burn reveal + count-up ───────────────────
+// Two scroll beats layered on the cost section. The headline day-count rolls up
+// from zero as the claim lands, then the year strip unveils left-to-right like a
+// fuse as it scrolls into view (--reveal scrubbed 0→1, gated by clip-path in
+// CSS). Both are desktop/motion niceties — the strip defaults to fully shown, so
+// reduced-motion and no-JS renders are complete and correct.
+function setupCostReveal() {
+  if (reduced) return;
+  const section = document.getElementById('numbers');
+  if (!section) return;
+  const header = section.querySelector('.numbers__header');
+  const months = section.querySelector('.numbers__months');
+  const elLost = section.querySelector('[data-days-lost]');
+
+  if (header && elLost) {
+    const target = parseInt(elLost.textContent, 10) || 0;
+    elLost.textContent = '0';
+    elLost._roll = { v: 0 };
+    ScrollTrigger.create({
+      trigger: header, start: 'top 75%', once: true,
+      onEnter: () => rollNum(elLost, target, 1.1),
+    });
+  }
+
+  if (months) {
+    months.style.setProperty('--reveal', '0');
+    const set = (self) => months.style.setProperty('--reveal', self.progress.toFixed(4));
+    // Anchored to #numbers itself (not .numbers__months) with end:'top top' —
+    // the exact frame where #numbers' own CSS sticky lock engages. #numbers
+    // freezes every child's viewport position once locked, so any scrub whose
+    // end boundary doesn't line up with that lock point risks completing
+    // mid-lock: frozen at whatever progress it had, right as the (separate)
+    // cost→Meet Focus handoff scrub kicks in — reads as a stutter/snap on
+    // entry. Sharing the lock's own reference frame guarantees the burn always
+    // finishes exactly as the section arrives, on any viewport height.
+    ScrollTrigger.create({
+      trigger: section, start: 'top 85%', end: 'top top', scrub: true,
+      onUpdate: set, onRefresh: set,
+    });
+  }
 }
 
 // ─── modes: scroll-staggered description reveal ─────────────
