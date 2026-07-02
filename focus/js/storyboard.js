@@ -541,6 +541,10 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     const words = splitTitleWords(titleEl);
     gsap.set(titleEl, { autoAlpha: 1 });
     words.forEach((wd) => { wd.style.opacity = '0.15'; });
+    // remember each word's last quantised opacity — unchanged words skip the
+    // style write, so a scrolled frame only invalidates the 2–3 words that are
+    // actually mid-transition (same discipline as the main.js headline fills)
+    const lastQ = new Int16Array(words.length).fill(-1);
     headlineST = ScrollTrigger.create({
       trigger: titleEl, start: 'top 85%', end: 'top 30%', scrub: 0.4,
       onUpdate(self) {
@@ -549,7 +553,10 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
         for (let i = 0; i < L; i++) {
           const lo = (i - 0.5) / L, hi = (i + 1.2) / L;
           const t = Math.max(0, Math.min(1, (p - lo) / (hi - lo)));
-          words[i].style.opacity = (0.15 + (1 - Math.pow(1 - t, 3)) * 0.85).toFixed(3);
+          const q = Math.round((0.15 + (1 - Math.pow(1 - t, 3)) * 0.85) * 100);
+          if (q === lastQ[i]) continue;
+          lastQ[i] = q;
+          words[i].style.opacity = q / 100;
         }
       },
     });

@@ -760,7 +760,7 @@ img, svg, canvas { display: block; }
 .hero__title { font-size: clamp(52px, 9.8vw, 125px); font-weight: 900; line-height: .96; letter-spacing: -.045em; margin-bottom: 28px; color: var(--ink-display); }
 .h-line-wrap { display: block; overflow: hidden; padding-right: 0.06em; }
 .h-line { display: block; }
-.hero__title .word { display: inline-block; will-change: transform; }
+.hero__title .word { display: inline-block; }
 .hero__lead { font-size: clamp(16px, 1.8vw, 21px); color: var(--ink-2); line-height: 1.6; max-width: 520px; margin-bottom: 40px; }
 .hero__cta { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 .hero__scrollcue { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3); animation: cue 2.4s ease-in-out infinite; }
@@ -822,12 +822,17 @@ img, svg, canvas { display: block; }
   --reveal: 1;
   clip-path: inset(0 calc((1 - var(--reveal)) * 100%) 0 0);
 }
-/* Glowing leading edge riding the burn front — peaks mid-sweep, gone at the ends */
+/* Glowing leading edge riding the burn front — peaks mid-sweep, gone at the
+   ends. Travels via transform (composited), not left: animating `left` forced
+   a layout pass on every scrubbed frame. --months-w (px) is measured by
+   setupCostReveal on refresh, since translateX percentages would resolve
+   against this 2px element rather than the strip. */
 .numbers__months::after {
   content: '';
   position: absolute; top: -4px; bottom: -4px;
-  left: calc(var(--reveal) * 100%);
+  left: 0;
   width: 2px;
+  transform: translateX(calc(var(--reveal) * var(--months-w, 0px)));
   background: var(--lime);
   box-shadow: 0 0 18px 5px rgba(191,255,71,.6);
   opacity: calc(min(var(--reveal), 1 - var(--reveal)) * 6);
@@ -843,10 +848,15 @@ img, svg, canvas { display: block; }
 }
 .numbers__month-fill {
   position: absolute; left: 0; top: 0; bottom: 0;
-  width: calc(var(--fill, 0) * 100%);
+  /* fill level via scaleX (composited) rather than width — a slider drag used
+     to trigger 12 staggered layout+paint passes at once. The gradient is
+     vertical, so the X-scale doesn't distort it. */
+  width: 100%;
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left;
   background: linear-gradient(180deg, #E8FF72, var(--lime));
   /* Cascade: on slider change the fills re-aim left-to-right via the --i stagger */
-  transition: width .5s var(--ease);
+  transition: transform .5s var(--ease);
   transition-delay: calc(var(--i, 0) * 0.035s);
 }
 .numbers__mlabels {
@@ -1107,7 +1117,7 @@ img, svg, canvas { display: block; }
   color: var(--ink-display); margin: 0 0 18px;
   text-shadow: 0 2px 16px rgba(0,0,0,.45);
 }
-.af__title .word { display: inline-block; will-change: transform, opacity; }
+.af__title .word { display: inline-block; }
 /* the lime accent word carries a slow, subtle sheen — signals "this is alive" */
 .af__title .lime {
   background: linear-gradient(100deg, var(--lime) 32%, var(--lime-2) 50%, var(--lime) 68%);
@@ -1677,7 +1687,6 @@ img, svg, canvas { display: block; }
   overflow: hidden;
   opacity: 0;
   transform: translateY(14px);
-  will-change: opacity, transform;
 }
 .mc img {
   width: 100%; height: 100%;
@@ -2344,19 +2353,22 @@ img, svg, canvas { display: block; }
   --paper-accent: #3F5900;
   /* The exit is a smooth locked brightness dim, not a boundary. On desktop the
      stage pins full-screen (sticky, below) and the section's extra height is a
-     scroll runway; setupPaperDim scrubs the surface --from/--to back to #141414
-     (plus ink → light, accent → lime, --paperness → 0) across that runway, with
-     a settle hold at each end — content fully visible before the dim starts,
-     fully dark before the lock releases. The paper *becomes* the dark of the
-     next section, so the seam never exists. The sheet reveal stays a one-off. */
-  --paperness: 1;
+     scroll runway; setupPaperDim fades the .turn__veil (a solid #141414 layer
+     over the paper but under the content — pure composited opacity, no repaint)
+     while the ink flips light and the accent returns to lime, with a settle
+     hold at each end — content fully visible before the dim starts, fully dark
+     before the lock releases. The paper *becomes* the dark of the next section,
+     so the seam never exists. The sheet reveal stays a one-off. */
   --dock: 1;
   position: relative;
   z-index: 1;
   /* base surface under the runway — only ever seen once fully dimmed */
   background: #141414;
 }
-/* The stage holds the whole scene; it locks to the viewport on desktop. */
+/* The stage holds the whole scene; it locks to the viewport on desktop.
+   The relaxing sheet corners are a clip-path (GPU-composited each frame), not
+   border-radius — animating radius repaints the full-viewport stage on every
+   scrub tick, a measurable source of the entrance jitter. */
 .turn__stage {
   position: relative;
   min-height: 100svh;
@@ -2368,8 +2380,7 @@ img, svg, canvas { display: block; }
   padding: clamp(40px, 5vh, 80px) var(--pad);
   overflow: hidden;
   background: linear-gradient(180deg, var(--from) 0%, var(--to) 16%, var(--to) 100%);
-  border-top-left-radius: calc((1 - var(--dock)) * 36px);
-  border-top-right-radius: calc((1 - var(--dock)) * 36px);
+  clip-path: inset(0 round calc((1 - var(--dock)) * 36px) calc((1 - var(--dock)) * 36px) 0 0);
 }
 /* desktop + motion: the stage pins full-screen (the smooth premium lock); the
    section's extra height above 100svh is the dim's scroll runway. Native sticky
@@ -2393,14 +2404,16 @@ img, svg, canvas { display: block; }
   position: absolute;
   inset: 0;
   z-index: 0;
-  border-radius: inherit;
   pointer-events: none;
-  background-image: radial-gradient(rgba(var(--paper-ink), .18) 1px, transparent 1.4px);
+  background-image: radial-gradient(rgba(20, 20, 20, .18) 1px, transparent 1.4px);
   background-size: 26px 26px;
   -webkit-mask-image: radial-gradient(60% 54% at 50% 46%, transparent 34%, #000 82%);
   mask-image: radial-gradient(60% 54% at 50% 46%, transparent 34%, #000 82%);
-  /* print texture belongs to the paper — it dims away with it */
-  opacity: calc(.5 * var(--paperness, 1));
+  /* static — the exit dim covers this with the .turn__veil rather than fading
+     it (fading a masked layer repainted it every scrubbed frame). Dot colour is
+     literal ink, NOT rgba(var(--paper-ink)): the ink triplet flips light during
+     the dim and light dots would ghost through the veil's crossfade. */
+  opacity: .5;
 }
 /* paper grain — keeps the cream from reading dead-flat (this site banded
    before; the noise is the fix, not an ornament). Plain overlay, no blend
@@ -2411,10 +2424,25 @@ img, svg, canvas { display: block; }
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: inherit;
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: calc(.03 * var(--paperness, 1));
+  /* static at .03 — paints above the veil (::after generates after children),
+     which keeps a whisper of texture through the dim instead of a dead fade */
+  opacity: .03;
+}
+/* the brightness-dim veil — a solid dark layer over the paper surface (and its
+   dot/grain textures) but under the content. setupPaperDim scrubs only this
+   element's OPACITY (composited, zero repaint) instead of re-tinting the
+   full-viewport gradient via --from/--to every frame, which was the single
+   biggest paint cost at the Meet Focus → Inside Focus boundary. At opacity 1 it
+   is exactly #141414 — the same surface the next section opens on. */
+.turn__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #141414;
+  opacity: 0;
+  pointer-events: none;
 }
 .turn__inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; max-width: 1000px; margin: 0 auto; }
 
