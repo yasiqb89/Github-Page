@@ -140,8 +140,8 @@ export function initNotifications(section) {
 export function initNumbersGrid() {}
 
 // ─── The noise field ─────────────────────────────────────────────────────────
-// Owns every moving part of the layer: the banner swarm, the patient-zero ping,
-// the iMessage clusters, pointer repulsion and depth parallax. Driven by beats.
+// Owns every moving part of the layer: the banner swarm, the iMessage clusters,
+// pointer repulsion and depth parallax. Driven by beats.
 function createNoiseField(container, section) {
   const canHover = matchMedia('(min-width: 861px) and (hover: hover)').matches;
 
@@ -161,7 +161,6 @@ function createNoiseField(container, section) {
   let beat = -1;                // -1 = layer hidden; forces re-apply on show
   let progress = 0;
   let boost = 0;                // opacity lift as the beats build (0 → 0.3)
-  let zero = null;              // the patient-zero record, when on stage
   let visible = false;
 
   // ── pointer repulsion + depth parallax (one rAF, ~15 elements) ──
@@ -222,7 +221,6 @@ function createNoiseField(container, section) {
     rec.el.remove();
     live.delete(rec);
     if (rec.slot !== null) usedSlots.delete(rec.slot);
-    if (zero === rec) zero = null;
   }
 
   function measure(rec) {
@@ -307,37 +305,8 @@ function createNoiseField(container, section) {
     });
   }
 
-  // ── patient zero — one lone ping before the swarm ──
-  function spawnZero() {
-    if (zero) return;
-    const el = buildBanner(APPS[0], PREVIEWS[0][0], 'now');
-    el.classList.add('notif-banner--zero');
-    container.appendChild(el);
-    const rec = { el, depth: 1, p0: progress, bx: 0, by: 0, rx: 0, ry: 0, slot: null };
-    zero = rec;
-    live.add(rec);
-    gsap.set(el, { y: -18, opacity: 0, scale: 1, transformOrigin: 'top center' });
-    gsap.to(el, {
-      y: 0, opacity: 0.95,
-      delay: 0.35, duration: 0.6, ease: 'back.out(1.9)',
-      onComplete: () => measure(rec),
-    });
-  }
-
-  function dismissZero() {
-    if (!zero) return;
-    const rec = zero;
-    zero = null;
-    gsap.killTweensOf(rec.el);
-    gsap.to(rec.el, {
-      y: -18, opacity: 0,
-      duration: 0.32, ease: 'power2.in',
-      onComplete: () => removeBanner(rec),
-    });
-  }
-
   // ── beats ──
-  //   0  "not weak"            near-silence; one lone ping
+  //   0  "not weak"            pure silence — empty, calm stage before the swarm
   //   1  "environment is loud" the swarm bursts in, steady drip
   //   2  "engineered to win"   peak: fast drip, brighter banners
   //   3  "never you."          silence — everything sweeps away
@@ -350,10 +319,8 @@ function createNoiseField(container, section) {
       stopDrip();
       if (prev > 0) sweep();
       boost = 0;
-      spawnZero();
       gsap.to(clusterLayer, { opacity: 0, duration: 0.4 });
     } else if (b === 1 || b === 2) {
-      dismissZero();
       boost = b === 1 ? 0.12 : 0.3;
       if (!clustersStarted) {
         clustersStarted = true;
@@ -369,7 +336,6 @@ function createNoiseField(container, section) {
       drip(b === 1 ? 1050 : 460);
     } else {
       stopDrip();
-      dismissZero();
       sweep();
       gsap.to(clusterLayer, { opacity: 0, duration: 0.7, ease: 'power2.inOut' });
     }
@@ -415,8 +381,7 @@ function buildMessageClusters(container) {
     // this to 0 on its first *play*, which is held until the loud beat. Without
     // this, .notif-bubble has no CSS opacity of its own (defaults to fully
     // visible) and .notif-messages sits at a dim-but-nonzero 0.18, so the raw
-    // text flashes through as soon as the container fades in at beat 0 — before
-    // the deliberately-delayed patient-zero ping even appears.
+    // text would flash through as soon as the container fades in at beat 0.
     gsap.set(typing, { opacity: 0 });
     cluster.appendChild(typing);
 

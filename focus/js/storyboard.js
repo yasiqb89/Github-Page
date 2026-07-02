@@ -57,6 +57,34 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   const svgs     = icons.map((el) => el.querySelector('svg'));
   // rebuilt app fragments that flank the copy for select features (data-for = icon index)
   const exhibits = [...section.querySelectorAll('.af__exhibit')];
+
+  // Big numerals count up when their exhibit materialises — same grammar as the
+  // cost section's rolling numbers. Only pure integers roll ("47", "312"); mixed
+  // formats ("8h 24m", "3 / 3", "#7") stay static. Targets are read once from
+  // the markup, so the cards remain the single source of truth for their data.
+  const rollers = [];
+  exhibits.forEach((ex) => {
+    ex.querySelectorAll('.afx-big-num, .afx-ao__num').forEach((el) => {
+      const tn = el.firstChild;
+      if (!tn || tn.nodeType !== 3) return;
+      const m = tn.textContent.match(/^(\s*)(\d+)(\s*)$/);
+      if (!m) return;
+      rollers.push({ idx: +ex.dataset.for, tn, pre: m[1], val: +m[2], post: m[3], o: { v: +m[2] } });
+    });
+  });
+  function rollExhibits(idx) {
+    if (reduced) return;
+    rollers.forEach((r) => {
+      if (r.idx !== idx) return;
+      gsap.killTweensOf(r.o);
+      r.o.v = 0;
+      gsap.to(r.o, {
+        v: r.val, duration: 0.8, delay: 0.2, ease: 'power2.out',
+        onUpdate: () => { r.tn.textContent = r.pre + Math.round(r.o.v) + r.post; },
+      });
+    });
+  }
+
   function showExhibits(idx) {
     let any = false;
     exhibits.forEach((el) => {
@@ -65,6 +93,7 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
       if (on) any = true;
     });
     section.classList.toggle('is-exhibiting', any);
+    if (any) rollExhibits(idx);
   }
   const titleEl  = section.querySelector('.af__title');
   const lineEl   = section.querySelector('.af__line');
@@ -98,10 +127,17 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     return a;
   });
 
-  // rest-state particle formation — a lime ring (echoes the app's focus ring)
-  const restPts = sample((c) => { c.lineWidth = 20; c.beginPath(); c.arc(150, 150, 94, 0, Math.PI * 2); c.stroke(); });
+  // rest-state particle formation — a complete lime ring (echoes the app's
+  // focus ring), rotating almost imperceptibly while at rest (see draw()) so
+  // the idle field breathes rather than sitting dead still.
+  const restPts = sample((c) => {
+    c.lineWidth = 20; c.beginPath();
+    c.arc(150, 150, 94, 0, Math.PI * 2);
+    c.stroke();
+  });
   const restT = new Float32Array(N * 2);
   for (let i = 0; i < N; i++) { const p = restPts[i % restPts.length]; restT[i*2] = p[0]; restT[i*2+1] = p[1]; }
+  let restRot = 0;
 
   // per-particle depth — gives the glyph volume (size / brightness / parallax vary)
   const pSize = new Float32Array(N), pAlpha = new Float32Array(N), pPlx = new Float32Array(N);
@@ -115,10 +151,19 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   const morph = Float32Array.from(restT);
   const rnd   = new Float32Array(N);
 
+  // morph character — per-particle arrival rate (glyphs SWEEP into shape
+  // instead of arriving as one uniform mass) plus a curved detour on ~18% of
+  // particles: a perpendicular drift proportional to the remaining delta, so
+  // the curl self-extinguishes exactly as each particle lands.
+  const pK  = new Float32Array(N);
+  const pSw = new Float32Array(N);
+
   // particles begin scattered, then assemble into the rest orb on entry
   const curS = new Float32Array(N * 2);
   for (let i = 0; i < N; i++) {
     rnd[i] = Math.random();
+    pK[i]  = 0.062 + rnd[i] * 0.05;
+    pSw[i] = rnd[i] > 0.82 ? (rnd[i] > 0.91 ? 0.022 : -0.022) : 0;
     const a = Math.random() * 6.2832, r = 200 + Math.random() * 200;
     curS[i*2] = Math.cos(a) * r; curS[i*2+1] = Math.sin(a) * r;
   }
@@ -168,13 +213,20 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
 
   // ── pointer: field parallax (spring) + dock cursor (row-local) ──
   let tpx = 0, tpy = 0, px = 0, py = 0, vx = 0, vy = 0;
+  // cursor lens — pointer position in canvas coords (canvas is inset:0 in the
+  // section, so section-local CSS px == canvas px). Parked far offscreen when
+  // the pointer leaves so the lens costs nothing.
+  let lpx = -1e5, lpy = -1e5;
   section.addEventListener('mousemove', (e) => {
     // read the CACHED rect — never getBoundingClientRect here, which would force
     // a synchronous layout on every move and stutter scrolling
     if (!secRect) return;
     tpx = ((e.clientX - secRect.left) / secRect.width) * 2 - 1;
     tpy = ((e.clientY - secRect.top) / secRect.height) * 2 - 1;
+    lpx = e.clientX - secRect.left;
+    lpy = e.clientY - secRect.top;
   }, { passive: true });
+  section.addEventListener('mouseleave', () => { lpx = -1e5; lpy = -1e5; }, { passive: true });
 
   let rlx = -9999, rly = -9999, inRow = false;
   if (row && finePointer) {
@@ -189,11 +241,11 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   const chipLift = new Float32Array(n);
   const chipMag  = new Float32Array(n).fill(1);
   function applyChipTransforms(instant) {
-    // skip the per-frame writes entirely when nothing is hovered/active and the
-    // chips are already at rest
+    // skip the per-frame writes entirely when nothing is hovered/active/pressed
+    // and the chips are already at rest
     if (!instant && active === -1 && !inRow) {
       let moving = false;
-      for (let i = 0; i < n; i++) { if (Math.abs(chipLift[i]) > 0.02 || Math.abs(chipMag[i] - 1) > 0.002) { moving = true; break; } }
+      for (let i = 0; i < n; i++) { if (chipPress[i] || Math.abs(chipLift[i]) > 0.02 || Math.abs(chipMag[i] - 1) > 0.002) { moving = true; break; } }
       if (!moving) return;
     }
     for (let i = 0; i < n; i++) {
@@ -204,6 +256,7 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
         const dx = rlx - chipC[i].x, dy = rly - chipC[i].y;
         magT += 0.10 * Math.exp(-(dx*dx + dy*dy) / (74 * 74));
       }
+      if (chipPress[i]) magT *= 0.92;   // press dip, eased by the same spring
       if (instant) { chipLift[i] = liftT; chipMag[i] = magT; }
       else { chipLift[i] += (liftT - chipLift[i]) * 0.32; chipMag[i] += (magT - chipMag[i]) * 0.32; }
       icons[i].style.transform = `translateY(${chipLift[i].toFixed(2)}px) scale(${chipMag[i].toFixed(3)})`;
@@ -246,8 +299,15 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     active = idx;
     const f = FEATURES[idx];
     tgtC[0] = f.col[0]; tgtC[1] = f.col[1]; tgtC[2] = f.col[2];
+    // one colour voice: the headline's accent word follows the feature colour
+    // via --fx (see .af.is-exhibiting .af__title .lime)
+    section.style.setProperty('--fx', `rgb(${f.col[0]},${f.col[1]},${f.col[2]})`);
     morph.set(T[idx]);
-    icons.forEach((el, k) => el.classList.toggle('is-active', k === idx));
+    icons.forEach((el, k) => {
+      el.classList.toggle('is-active', k === idx);
+      el.setAttribute('aria-selected', k === idx ? 'true' : 'false');
+      el.tabIndex = k === idx ? 0 : -1;      // roving tabindex — one tab stop for the whole row
+    });
     showExhibits(idx);
     morphCopy(f.title, f.line, 1);
     if (reduced) applyChipTransforms(true);
@@ -257,17 +317,41 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     active = -1;
     tgtC[0] = DEFAULT.col[0]; tgtC[1] = DEFAULT.col[1]; tgtC[2] = DEFAULT.col[2];
     morph.set(restT);
-    icons.forEach((el) => el.classList.remove('is-active'));
+    icons.forEach((el, k) => {
+      el.classList.remove('is-active');
+      el.setAttribute('aria-selected', 'false');
+      el.tabIndex = k === 0 ? 0 : -1;
+    });
     showExhibits(-1);
     morphCopy(DEFAULT.title, DEFAULT.line, -1);
     if (reduced) applyChipTransforms(true);
   }
+  // press physics — the pressed chip dips through the dock's spring system
+  // (inline transforms own these elements, so CSS :active can't reach them)
+  const chipPress = new Uint8Array(n);
   icons.forEach((el, k) => {
     el.addEventListener('mouseenter', () => setActive(k));
     el.addEventListener('focus',      () => setActive(k));
     el.addEventListener('click',      () => setActive(k));
+    el.addEventListener('pointerdown',   () => { chipPress[k] = 1; });
+    el.addEventListener('pointerup',     () => { chipPress[k] = 0; });
+    el.addEventListener('pointerleave',  () => { chipPress[k] = 0; });
+    el.addEventListener('pointercancel', () => { chipPress[k] = 0; });
+    el.tabIndex = k === 0 ? 0 : -1;
   });
   if (row) row.addEventListener('mouseleave', () => { leaveTimer = setTimeout(setDefault, 240); });
+  // arrow-key roving — real tablist behaviour (focus handler drives setActive)
+  if (row) row.addEventListener('keydown', (e) => {
+    const key = e.key;
+    if (key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'Home' && key !== 'End') return;
+    e.preventDefault();
+    let next = active === -1 ? 0 : active;
+    if (key === 'ArrowRight')     next = (next + 1) % n;
+    else if (key === 'ArrowLeft') next = (next - 1 + n) % n;
+    else if (key === 'Home')      next = 0;
+    else                          next = n - 1;
+    icons[next].focus();
+  });
 
   // ── particle sprite ──
   const sp = document.createElement('canvas'); sp.width = sp.height = 8;
@@ -351,20 +435,51 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     if (washKey === -1 || performance.now() - lastScrollAt >= 90) { buildWash(qc); buildSprite(qc); }
     ctx.drawImage(washCv, cx - R, cy - R, R * 2, R * 2);
 
-    // Direct morph: every particle simply eases from its current spot toward the
-    // new glyph (morph buffer is set on hover). No mid-transition scatter — a
-    // clean A→B flow instead of an explode-and-reform.
+    // At rest the brand arc rotates almost imperceptibly (~1 rev / 90s): the
+    // morph targets themselves turn, and the particles chase them — so the
+    // rotation shares the exact easing character of every other formation
+    // change, and hovering mid-turn hands off seamlessly.
+    if (active === -1) {
+      restRot += 0.00035;
+      const cR = Math.cos(restRot), sR = Math.sin(restRot);
+      for (let i = 0; i < N; i++) {
+        const x = i*2, y = i*2+1;
+        morph[x] = restT[x] * cR - restT[y] * sR;
+        morph[y] = restT[x] * sR + restT[y] * cR;
+      }
+    }
+
+    // Direct morph with character: each particle eases toward the glyph at its
+    // own rate (pK — shapes sweep into place rather than arriving as one mass),
+    // and ~18% take a curved detour (pSw — perpendicular drift proportional to
+    // the remaining delta, self-extinguishing on landing).
     ctx.globalCompositeOperation = 'lighter';   // additive — overlaps bloom into glow
     const tm = performance.now() * 0.001, baseDot = 3.2 * scale;
+    const LENS_R2 = 95 * 95, lensOn = finePointer && lpx > -1e4;
     for (let i = 0; i < drawN; i++) {
       const x = i*2, y = i*2+1;
-      curS[x] += (morph[x] - curS[x]) * 0.085;
-      curS[y] += (morph[y] - curS[y]) * 0.085;
+      const mdx = morph[x] - curS[x], mdy = morph[y] - curS[y];
+      const k = pK[i], sw = pSw[i];
+      curS[x] += mdx * k + mdy * sw;
+      curS[y] += mdy * k - mdx * sw;
       const dxj = fsin(tm + rnd[i] * 6.28) * 1.3, dyj = fcos(tm + rnd[i] * 5) * 1.3;
       const ex = px * 16 * (pPlx[i] - 0.9), ey = py * 12 * (pPlx[i] - 0.9); // depth parallax
 
-      const sx = cx + (curS[x] + dxj) * scale + ex;
-      const sy = cy + (curS[y] + dyj) * scale + ey;
+      let sx = cx + (curS[x] + dxj) * scale + ex;
+      let sy = cy + (curS[y] + dyj) * scale + ey;
+      // cursor lens — the field yields around the pointer and closes behind it.
+      // Draw-space only (curS untouched), so the glyph's true shape is never
+      // disturbed and the lens costs one distance check per particle.
+      if (lensOn) {
+        const ldx = sx - lpx, ldy = sy - lpy;
+        const d2 = ldx * ldx + ldy * ldy;
+        if (d2 < LENS_R2) {
+          const f = 1 - d2 / LENS_R2;
+          const s = (f * f * 22) / (Math.sqrt(d2) + 8);
+          sx += ldx * s;
+          sy += ldy * s;
+        }
+      }
       const dot = baseDot * pSize[i];
       ctx.globalAlpha = pAlpha[i];
       ctx.drawImage(sp, sx - dot / 2, sy - dot / 2, dot, dot);

@@ -526,12 +526,6 @@ img, svg, canvas { display: block; }
   will-change: transform, opacity;
   user-select: none;
 }
-/* Patient zero — the lone first ping, top-centre at full presence */
-.notif-banner--zero {
-  left: calc(50% - 130px);
-  top: 8%;
-  border-color: rgba(255,255,255,0.12);
-}
 /* Grouped stack — a second card peeking beneath, iOS-style */
 .notif-banner.is-stacked::after {
   content: '';
@@ -1209,8 +1203,15 @@ img, svg, canvas { display: block; }
   text-shadow: 0 1px 3px rgba(0,0,0,.6), 0 0 1px rgba(0,0,0,.55);
   transition: opacity .55s var(--ease), transform .85s var(--ease),
               visibility 0s linear .85s;
-  will-change: transform, opacity;
+  /* right panel answers the left a beat later — a conversation, not a curtain.
+     --xd also offsets every inner-cascade delay below. */
+  --xd: 0s;
 }
+.af__exhibit--r { --xd: .09s; }
+/* will-change only while visible — 30 permanently-promoted hidden panels was
+   ~28 wasted compositor layers */
+.af__exhibit.is-shown { will-change: transform, opacity; }
+.af__exhibit--r.is-shown { transition-delay: .09s, .09s, 0s; }
 /* anchored to the centre — the inner edge sits just clear of the morphed glyph,
    so the panels hug the image and the slack falls to the outer edges, not
    between the panels. The glyph scales with viewport height (≈23.5vh half-width,
@@ -1225,6 +1226,127 @@ img, svg, canvas { display: block; }
    and bright (no shade pool — content blends straight into the field) */
 .af__canvas { transition: opacity .6s var(--ease); }
 .af.is-exhibiting .af__canvas { opacity: .66; }
+
+/* one colour voice per feature: while a feature is active, the headline's
+   accent word takes the feature colour (--fx, set by storyboard.js) so field,
+   exhibits and type make a single colour statement. Lime remains the rest state. */
+.af.is-exhibiting .af__title .lime {
+  background-image: linear-gradient(100deg,
+    var(--fx, var(--lime)) 32%,
+    color-mix(in srgb, var(--fx, var(--lime)) 55%, #fff) 50%,
+    var(--fx, var(--lime)) 68%);
+}
+
+/* ── exhibits PERFORM, not appear — inner choreography on materialise ──
+   The panels are rebuilt live UI; when one materialises its content behaves
+   like the app running: rows cascade, bars grow from the baseline, rings draw
+   themselves, dots ignite one by one (numerals count up via storyboard.js).
+   All transition-delay driven off .is-shown; --xd staggers right after left.
+   Exit is instant-ish (base rules carry no delay) so switching features never
+   feels laggy. Scoped to no-preference — reduced motion gets finished states. */
+@media (prefers-reduced-motion: no-preference) {
+  /* generic row cascade — every direct child of a panel rises in sequence */
+  .af__exhibit .afx-card > * {
+    opacity: 0;
+    transform: translateY(9px);
+    transition: opacity .4s var(--ease), transform .5s var(--ease);
+  }
+  .af__exhibit.is-shown .afx-card > * { opacity: 1; transform: none; }
+  .af__exhibit.is-shown .afx-card > :nth-child(1) { transition-delay: calc(var(--xd) + .04s); }
+  .af__exhibit.is-shown .afx-card > :nth-child(2) { transition-delay: calc(var(--xd) + .10s); }
+  .af__exhibit.is-shown .afx-card > :nth-child(3) { transition-delay: calc(var(--xd) + .16s); }
+  .af__exhibit.is-shown .afx-card > :nth-child(4) { transition-delay: calc(var(--xd) + .22s); }
+  .af__exhibit.is-shown .afx-card > :nth-child(5) { transition-delay: calc(var(--xd) + .28s); }
+  .af__exhibit.is-shown .afx-card > :nth-child(6) { transition-delay: calc(var(--xd) + .34s); }
+  .af__exhibit.is-shown .afx-card > :nth-child(n+7) { transition-delay: calc(var(--xd) + .40s); }
+
+  /* bar charts grow from the baseline, left to right */
+  .af__exhibit .afx-bars__plot b,
+  .af__exhibit .afx-mom__bars b,
+  .af__exhibit .afx-hour-chart b {
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform .55s var(--ease);
+  }
+  .af__exhibit.is-shown .afx-bars__plot b,
+  .af__exhibit.is-shown .afx-mom__bars b,
+  .af__exhibit.is-shown .afx-hour-chart b { transform: scaleY(1); }
+  .af__exhibit.is-shown .afx-bars__plot b:nth-child(1),
+  .af__exhibit.is-shown .afx-mom__bars b:nth-child(1),
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(1) { transition-delay: calc(var(--xd) + .18s); }
+  .af__exhibit.is-shown .afx-bars__plot b:nth-child(2),
+  .af__exhibit.is-shown .afx-mom__bars b:nth-child(2),
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(2) { transition-delay: calc(var(--xd) + .22s); }
+  .af__exhibit.is-shown .afx-bars__plot b:nth-child(3),
+  .af__exhibit.is-shown .afx-mom__bars b:nth-child(3),
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(3) { transition-delay: calc(var(--xd) + .26s); }
+  .af__exhibit.is-shown .afx-bars__plot b:nth-child(4),
+  .af__exhibit.is-shown .afx-mom__bars b:nth-child(4),
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(4) { transition-delay: calc(var(--xd) + .30s); }
+  .af__exhibit.is-shown .afx-bars__plot b:nth-child(5),
+  .af__exhibit.is-shown .afx-mom__bars b:nth-child(5),
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(5) { transition-delay: calc(var(--xd) + .34s); }
+  .af__exhibit.is-shown .afx-bars__plot b:nth-child(6),
+  .af__exhibit.is-shown .afx-mom__bars b:nth-child(6),
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(6) { transition-delay: calc(var(--xd) + .38s); }
+  .af__exhibit.is-shown .afx-bars__plot b:nth-child(7),
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(7) { transition-delay: calc(var(--xd) + .42s); }
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(8) { transition-delay: calc(var(--xd) + .46s); }
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(9) { transition-delay: calc(var(--xd) + .50s); }
+  .af__exhibit.is-shown .afx-hour-chart b:nth-child(10) { transition-delay: calc(var(--xd) + .54s); }
+
+  /* progress tracks sweep in from the left */
+  .af__exhibit .afx-dim__track b,
+  .af__exhibit .afx-lim__bar b {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .6s var(--ease);
+  }
+  .af__exhibit.is-shown .afx-dim__track b,
+  .af__exhibit.is-shown .afx-lim__bar b { transform: scaleX(1); transition-delay: calc(var(--xd) + .24s); }
+
+  /* day dots / streak dots ignite one by one, with a small pop */
+  .af__exhibit .afx-week__dots i,
+  .af__exhibit .afx-streak__dots i {
+    transform: scale(0);
+    transition: transform .32s cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .af__exhibit.is-shown .afx-week__dots i,
+  .af__exhibit.is-shown .afx-streak__dots i { transform: scale(1); }
+  .af__exhibit.is-shown .afx-week__dots i:nth-of-type(1),
+  .af__exhibit.is-shown .afx-streak__dots i:nth-of-type(1) { transition-delay: calc(var(--xd) + .22s); }
+  .af__exhibit.is-shown .afx-week__dots i:nth-of-type(2),
+  .af__exhibit.is-shown .afx-streak__dots i:nth-of-type(2) { transition-delay: calc(var(--xd) + .27s); }
+  .af__exhibit.is-shown .afx-week__dots i:nth-of-type(3),
+  .af__exhibit.is-shown .afx-streak__dots i:nth-of-type(3) { transition-delay: calc(var(--xd) + .32s); }
+  .af__exhibit.is-shown .afx-week__dots i:nth-of-type(4),
+  .af__exhibit.is-shown .afx-streak__dots i:nth-of-type(4) { transition-delay: calc(var(--xd) + .37s); }
+  .af__exhibit.is-shown .afx-week__dots i:nth-of-type(5),
+  .af__exhibit.is-shown .afx-streak__dots i:nth-of-type(5) { transition-delay: calc(var(--xd) + .42s); }
+  .af__exhibit.is-shown .afx-week__dots i:nth-of-type(6),
+  .af__exhibit.is-shown .afx-streak__dots i:nth-of-type(6) { transition-delay: calc(var(--xd) + .47s); }
+  .af__exhibit.is-shown .afx-week__dots i:nth-of-type(7),
+  .af__exhibit.is-shown .afx-streak__dots i:nth-of-type(7) { transition-delay: calc(var(--xd) + .52s); }
+
+  /* sync checkmarks tick in sequentially */
+  .af__exhibit .afx-sync__ok {
+    display: inline-block;
+    transform: scale(0);
+    transition: transform .3s cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .af__exhibit.is-shown .afx-sync__ok { transform: scale(1); }
+  .af__exhibit.is-shown .afx-row:nth-of-type(1) .afx-sync__ok { transition-delay: calc(var(--xd) + .26s); }
+  .af__exhibit.is-shown .afx-row:nth-of-type(2) .afx-sync__ok { transition-delay: calc(var(--xd) + .38s); }
+  .af__exhibit.is-shown .afx-row:nth-of-type(3) .afx-sync__ok { transition-delay: calc(var(--xd) + .50s); }
+
+  /* progress rings draw themselves. CSS beats the SVG presentation attribute,
+     so :not(.is-shown) holds the ring empty (offset = full circumference) and
+     .is-shown releases it back to the attribute value — the draw transitions. */
+  .afx-sess__ring circle[stroke-linecap],
+  .afx-widget-sq circle[stroke-linecap] { transition: stroke-dashoffset .9s var(--ease) calc(var(--xd, 0s) + .22s); }
+  .af__exhibit:not(.is-shown) .afx-sess__ring circle[stroke-linecap] { stroke-dashoffset: 213.6px; }
+  .af__exhibit:not(.is-shown) .afx-widget-sq circle[stroke-linecap] { stroke-dashoffset: 188.5px; }
+}
 
 /* no card — content sits directly on the dark field */
 .afx-card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
@@ -1490,9 +1612,26 @@ img, svg, canvas { display: block; }
 /* ── Weekly reports R: panel 10% narrower */
 [data-for="8"].af__exhibit--r { width: clamp(234px, 19.8vw, 306px); }
 
-/* only flank on wide screens with fine pointers */
-@media (max-width: 1280px) { .af__exhibits { display: none; } }
-@media (hover: none)       { .af__exhibits { display: none; } }
+/* Flanking panels need the wide free columns beside the glyph; below 1280px
+   (and that includes every phone and tablet) the layout collapses to a single
+   centred card — the primary (left) panel materialises over the dimmed field
+   on a soft scrim, driven by tap or hover exactly like the flanking mode. The
+   old gates hid .af__exhibits entirely under 1280px / on touch, so the richest
+   content of the section was simply never seen there. */
+@media (max-width: 1280px) {
+  .af__exhibit--r { display: none; }
+  .af__exhibit--l {
+    right: auto;
+    left: 50%;
+    width: min(86vw, 330px);
+    padding: 20px 22px;
+    border-radius: 18px;
+    background: rgba(17, 17, 17, .82);
+    border: 1px solid rgba(255, 255, 255, .07);
+    transform: translate(-50%, calc(-50% + 22px)) scale(.95);
+  }
+  .af__exhibit--l.is-shown { transform: translate(-50%, -50%) scale(1); }
+}
 
 /* ─────────────────────────────────────
    SECTION 3 — MODES
@@ -2263,8 +2402,11 @@ img, svg, canvas { display: block; }
   /* print texture belongs to the paper — it dims away with it */
   opacity: calc(.5 * var(--paperness, 1));
 }
-/* paper grain — keeps the cream from reading dead-flat and dithers the phone
-   halo (this site banded before; the noise is the fix, not an ornament) */
+/* paper grain — keeps the cream from reading dead-flat (this site banded
+   before; the noise is the fix, not an ornament). Plain overlay, no blend
+   mode: mix-blend-mode:multiply forced a full backdrop re-composite on every
+   frame the stage slid up — the main source of the cost→Meet-Focus jitter. The
+   raw feTurbulence noise reads near-identically over cream at this opacity. */
 .turn__stage::after {
   content: '';
   position: absolute;
@@ -2272,8 +2414,7 @@ img, svg, canvas { display: block; }
   border-radius: inherit;
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: calc(.045 * var(--paperness, 1));
-  mix-blend-mode: multiply;
+  opacity: calc(.03 * var(--paperness, 1));
 }
 .turn__inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; max-width: 1000px; margin: 0 auto; }
 
@@ -2307,17 +2448,15 @@ img, svg, canvas { display: block; }
    and image; only its placement changes. JS scrubs the wrapper's rise
    (yPercent/rotateX/scale), the img carries the idle bob, so the two motion
    layers never write the same transform. */
-.turn__media { position: relative; height: 98svh; margin: clamp(20px, 3vh, 40px) auto; }
-.turn__media img { display: block; position: relative; z-index: 1; height: 100%; width: auto; }
-/* ambient halo behind the phone — depth was invisible on dark, it sells here */
-.turn__media::before {
-  content: '';
-  position: absolute;
-  inset: 4% -18% 16% -18%;
-  background: radial-gradient(50% 44% at 50% 40%, rgba(var(--paper-ink), .12), transparent 72%);
-  opacity: var(--dock);
-  pointer-events: none;
+/* promoted to its own compositor layer so the scrubbed 3D rise (rotateX +
+   scale) composites instead of re-rasterising the large phone webp each frame
+   as the sheet slides up. */
+.turn__media {
+  position: relative; height: 98svh; margin: clamp(20px, 3vh, 40px) auto;
+  will-change: transform;
+  backface-visibility: hidden;
 }
+.turn__media img { display: block; position: relative; z-index: 1; height: 100%; width: auto; }
 /* landing bloom — the screen lights up once as the sheet docks (JS one-shot) */
 .turn__bloom {
   position: absolute;
