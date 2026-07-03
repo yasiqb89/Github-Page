@@ -760,7 +760,7 @@ img, svg, canvas { display: block; }
 .hero__title { font-size: clamp(52px, 9.8vw, 125px); font-weight: 900; line-height: .96; letter-spacing: -.045em; margin-bottom: 28px; color: var(--ink-display); }
 .h-line-wrap { display: block; overflow: hidden; padding-right: 0.06em; }
 .h-line { display: block; }
-.hero__title .word { display: inline-block; will-change: transform; }
+.hero__title .word { display: inline-block; }
 .hero__lead { font-size: clamp(16px, 1.8vw, 21px); color: var(--ink-2); line-height: 1.6; max-width: 520px; margin-bottom: 40px; }
 .hero__cta { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 .hero__scrollcue { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3); animation: cue 2.4s ease-in-out infinite; }
@@ -822,12 +822,17 @@ img, svg, canvas { display: block; }
   --reveal: 1;
   clip-path: inset(0 calc((1 - var(--reveal)) * 100%) 0 0);
 }
-/* Glowing leading edge riding the burn front — peaks mid-sweep, gone at the ends */
+/* Glowing leading edge riding the burn front — peaks mid-sweep, gone at the
+   ends. Travels via transform (composited), not left: animating `left` forced
+   a layout pass on every scrubbed frame. --months-w (px) is measured by
+   setupCostReveal on refresh, since translateX percentages would resolve
+   against this 2px element rather than the strip. */
 .numbers__months::after {
   content: '';
   position: absolute; top: -4px; bottom: -4px;
-  left: calc(var(--reveal) * 100%);
+  left: 0;
   width: 2px;
+  transform: translateX(calc(var(--reveal) * var(--months-w, 0px)));
   background: var(--lime);
   box-shadow: 0 0 18px 5px rgba(191,255,71,.6);
   opacity: calc(min(var(--reveal), 1 - var(--reveal)) * 6);
@@ -843,10 +848,15 @@ img, svg, canvas { display: block; }
 }
 .numbers__month-fill {
   position: absolute; left: 0; top: 0; bottom: 0;
-  width: calc(var(--fill, 0) * 100%);
+  /* fill level via scaleX (composited) rather than width — a slider drag used
+     to trigger 12 staggered layout+paint passes at once. The gradient is
+     vertical, so the X-scale doesn't distort it. */
+  width: 100%;
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left;
   background: linear-gradient(180deg, #E8FF72, var(--lime));
   /* Cascade: on slider change the fills re-aim left-to-right via the --i stagger */
-  transition: width .5s var(--ease);
+  transition: transform .5s var(--ease);
   transition-delay: calc(var(--i, 0) * 0.035s);
 }
 .numbers__mlabels {
@@ -1004,6 +1014,11 @@ img, svg, canvas { display: block; }
   background: transparent;
   /* pointer-events:none lets the wheel reach Lenis instead of the iframe. */
   pointer-events: none;
+  /* the demo's "youtube.com" page is a stock-bright white — dims it toward the
+     section's dark register without touching the (compiled, unreachable)
+     bundle's internal styling. CSS filter applies to the iframe's whole
+     rendered output, same trick used for embeds we don't control. */
+  filter: brightness(.84) saturate(.92);
 }
 
 /* push the whole mockup column down so content sits lower in the section */
@@ -1011,49 +1026,140 @@ img, svg, canvas { display: block; }
   margin-top: clamp(32px, 5vw, 72px);
 }
 
-/* iPhone — real phone PNG with live video overlaid on the screen area.
-   Wrapper owns position/size/shadow; img + video stack inside it. */
-.device-phone-wrap {
-  position: absolute;
-  left: -1.5%;
-  bottom: -8%;
-  width: 24%;
-  z-index: 2;
-  pointer-events: none;
-}
-.device-phone-img {
-  display: block;
-  width: 100%;
-  height: auto;
-  position: relative;
-  z-index: 2;
-  filter:
-    drop-shadow(0 8px 12px rgba(0,0,0,.48))
-    drop-shadow(0 2px 4px rgba(0,0,0,.28));
-}
-/* Video sits above the PNG (z-index 3 > img z-index 2) inside the bezel.
-   Slightly inset from raw screen edges so bezel reads cleanly around it.
-   Border simulates the recessed screen lip. */
-.device-phone-video {
-  position: absolute;
-  left: 9%;
-  top: 4.6%;
-  width: 82%;
-  height: 90.5%;
-  object-fit: cover;
-  border-radius: 11% / 5.1%;
-  border: 1.5px solid rgba(0,0,0,0.8);
-  z-index: 3;
-  display: block;
+/* ── the handshake — session phone → browser ─────────────────
+   One narrative beat (setupPairHandshake), played once as the section
+   settles: a partial iPhone (running session on its screen) rises at the
+   browser's corner, the keyline breathes once and the Paired chip settles.
+   CSS defaults below are the SETTLED state (reduced-motion / no-JS renders
+   the finished scene); the JS sets hidden initial states before animating,
+   mirroring the --dock / --lp pattern. All motion is transform/opacity. */
+
+/* artifact tag — lives INSIDE .mockup-combo so it shares the window's exact
+   left edge (as a flex sibling it floated beside the window in dead space) */
+.block__tag {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 12px;
 }
 
+/* the pairing story — three quiet hairline rows under the headline */
+.block__ledger { margin-top: 34px; max-width: 34ch; }
+.block__row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-top: 1px solid rgba(230, 235, 241, .12);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.block__row:last-child { border-bottom: 1px solid rgba(230, 235, 241, .12); }
+.block__num {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--lime);
+}
+
+/* keyline flash — pre-rendered lime glow hugging the window; JS animates
+   ONLY its opacity (composited), so the glow never repaints mid-flash. */
+.block__flash {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 0 0 1px rgba(191, 255, 71, .55),
+    0 0 34px 2px rgba(191, 255, 71, .22);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* paired chip — pinned to the window's top-right edge like a wax seal */
+.pair-chip {
+  position: absolute;
+  top: -12px;
+  right: 18px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--lime);
+  background: #101012;
+  border: 1px solid rgba(191, 255, 71, .38);
+  border-radius: 99px;
+  padding: 5px 12px;
+  pointer-events: none;
+}
+.pair-chip__dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 8px 1px rgba(191, 255, 71, .8);
+}
+
+/* the window wrapper — positioning context for the straddling chip (the crop
+   itself clips overflow, so the chip can't anchor inside it) */
+.block__window { position: relative; }
+
+/* the iPhone — a partial device at the window's corner: roughly the top 75%
+   shows, the rest dissolves through a mask so it reads as emerging from the
+   section rather than pasted on. A real premium mockup photo (the actual
+   blocking screen) now fills the same footprint the earlier CSS-built device
+   used — its own alpha channel already carries the rounded bezel, so no
+   border-radius/overflow clip is needed here.
+
+   The device overlaps the browser at the corner, so anywhere the artwork is
+   NOT fully opaque (the bottom dissolve, the thin margins beside the frame)
+   the browser reads through it. Two things keep that clean:
+   • bottom offset lands the whole dissolve BELOW the window's bottom edge, so
+     the phone fades into the dark section background — never over the browser
+     (.mockup-combo's height is driven entirely by .block__window, so the
+     combo bottom IS the window bottom at any viewport).
+   • no drop-shadow: a cast shadow is invisible on the dark section but darkens
+     the lighter browser wherever the box overlaps it — reading as a grey
+     rectangle around the phone. The frame's own baked metal edge carries the
+     separation instead. */
+.pair-phone {
+  position: absolute;
+  left: -3%;
+  bottom: -6%;
+  z-index: 4;
+  width: clamp(188px, 27%, 224px);
+  aspect-ratio: 393 / 560;
+  pointer-events: none;
+  /* the crop: object-fit:cover exposes the source screenshot's top ~72% of
+     height at this box's aspect-ratio (icon, headline, subtext — the CTAs
+     below sit past that hard edge, at this footprint). The dissolve is a tight
+     band deep in the box (94%→100%) so it lands ~32–50px below the window's
+     bottom edge — past the window's own box-shadow reach (~28px). Anything the
+     fade grazes reads through the translucent phone, so it must clear both the
+     browser AND its cast shadow, dissolving only over the flat dark section. */
+  -webkit-mask-image: linear-gradient(180deg, #000 94%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 94%, transparent 100%);
+}
+.pair-phone__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
 
 /* responsive */
 @media (max-width: 860px) {
   .block__grid { grid-template-columns: 1fr; }
   .block__copy, .block__mockup-wrap { grid-column: 1; }
   .mockup-combo  { max-width: 100%; }
-  .device-phone-wrap { width: 30%; left: 0%; bottom: -6%; }
+  .pair-phone { width: clamp(172px, 44%, 210px); left: 0; bottom: -10%; }
+  .pair-chip { right: 10px; }
 }
 
 /* ─────────────────────────────────────
@@ -1107,7 +1213,7 @@ img, svg, canvas { display: block; }
   color: var(--ink-display); margin: 0 0 18px;
   text-shadow: 0 2px 16px rgba(0,0,0,.45);
 }
-.af__title .word { display: inline-block; will-change: transform, opacity; }
+.af__title .word { display: inline-block; }
 /* the lime accent word carries a slow, subtle sheen — signals "this is alive" */
 .af__title .lime {
   background: linear-gradient(100deg, var(--lime) 32%, var(--lime-2) 50%, var(--lime) 68%);
@@ -1677,7 +1783,6 @@ img, svg, canvas { display: block; }
   overflow: hidden;
   opacity: 0;
   transform: translateY(14px);
-  will-change: opacity, transform;
 }
 .mc img {
   width: 100%; height: 100%;
@@ -1836,9 +1941,11 @@ img, svg, canvas { display: block; }
 }
 .journey { padding: 0; }
 
-/* GSAP pins this element — do NOT add position:sticky here */
+/* Full-viewport frame — the strip deals in and glides to rest on its own when
+   the section enters view. No pin, no scroll-linked pan: an ordinary section
+   that never competes for the wheel. */
 .journey__pin {
-  position: relative; /* needed for absolute-positioned hint pill */
+  position: relative;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -1895,7 +2002,7 @@ img, svg, canvas { display: block; }
   padding-bottom: clamp(10px, 1.5vh, 20px);
   box-sizing: border-box;
 }
-/* Reduced-motion fallback: real horizontal scroll instead of the pinned scrub */
+/* Reduced-motion fallback: real horizontal scroll instead of the auto-glide */
 .journey__strip-wrap.is-native {
   overflow-x: auto;
   scroll-snap-type: x proximity;
@@ -2344,19 +2451,22 @@ img, svg, canvas { display: block; }
   --paper-accent: #3F5900;
   /* The exit is a smooth locked brightness dim, not a boundary. On desktop the
      stage pins full-screen (sticky, below) and the section's extra height is a
-     scroll runway; setupPaperDim scrubs the surface --from/--to back to #141414
-     (plus ink → light, accent → lime, --paperness → 0) across that runway, with
-     a settle hold at each end — content fully visible before the dim starts,
-     fully dark before the lock releases. The paper *becomes* the dark of the
-     next section, so the seam never exists. The sheet reveal stays a one-off. */
-  --paperness: 1;
+     scroll runway; setupPaperDim fades the .turn__veil (a solid #141414 layer
+     over the paper but under the content — pure composited opacity, no repaint)
+     while the ink flips light and the accent returns to lime, with a settle
+     hold at each end — content fully visible before the dim starts, fully dark
+     before the lock releases. The paper *becomes* the dark of the next section,
+     so the seam never exists. The sheet reveal stays a one-off. */
   --dock: 1;
   position: relative;
   z-index: 1;
   /* base surface under the runway — only ever seen once fully dimmed */
   background: #141414;
 }
-/* The stage holds the whole scene; it locks to the viewport on desktop. */
+/* The stage holds the whole scene; it locks to the viewport on desktop.
+   The relaxing sheet corners are a clip-path (GPU-composited each frame), not
+   border-radius — animating radius repaints the full-viewport stage on every
+   scrub tick, a measurable source of the entrance jitter. */
 .turn__stage {
   position: relative;
   min-height: 100svh;
@@ -2368,8 +2478,7 @@ img, svg, canvas { display: block; }
   padding: clamp(40px, 5vh, 80px) var(--pad);
   overflow: hidden;
   background: linear-gradient(180deg, var(--from) 0%, var(--to) 16%, var(--to) 100%);
-  border-top-left-radius: calc((1 - var(--dock)) * 36px);
-  border-top-right-radius: calc((1 - var(--dock)) * 36px);
+  clip-path: inset(0 round calc((1 - var(--dock)) * 36px) calc((1 - var(--dock)) * 36px) 0 0);
 }
 /* desktop + motion: the stage pins full-screen (the smooth premium lock); the
    section's extra height above 100svh is the dim's scroll runway. Native sticky
@@ -2385,22 +2494,38 @@ img, svg, canvas { display: block; }
     padding-top: clamp(44px, 6vh, 84px);
   }
 }
-/* dot grid — a whisper of print texture on the paper. Masked away from the
-   centre stage so type and the phone sit on clean cream; the dots live at the
-   edges where the eye reads "material", not "pattern". */
+/* dot grid — a whisper of print texture on the paper. The mask keeps the dots
+   off the type and the phone and confines them to the side margins where the eye
+   reads "material", not "pattern".
+   Two mask layers, intersected:
+   • horizontal bands clear a central column (22–78%) full-height, so the phone —
+     which is 29–71% wide and bleeds off the bottom — never sits over dots (its
+     dissolved lower end used to show the dots through it, which looked odd); the
+     headline (25–75%) is cleared by the same channel.
+   • a top-weighted vertical fade lets the dots die out below ~mid-height, so the
+     bottom-right copy sits on clean cream too.
+   Intersecting the two leaves dots only in the upper side margins. */
 .turn__stage::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 0;
-  border-radius: inherit;
   pointer-events: none;
-  background-image: radial-gradient(rgba(var(--paper-ink), .18) 1px, transparent 1.4px);
+  background-image: radial-gradient(rgba(20, 20, 20, .18) 1px, transparent 1.4px);
   background-size: 26px 26px;
-  -webkit-mask-image: radial-gradient(60% 54% at 50% 46%, transparent 34%, #000 82%);
-  mask-image: radial-gradient(60% 54% at 50% 46%, transparent 34%, #000 82%);
-  /* print texture belongs to the paper — it dims away with it */
-  opacity: calc(.5 * var(--paperness, 1));
+  -webkit-mask-image:
+    linear-gradient(90deg, #000 0 6%, transparent 22% 78%, #000 94% 100%),
+    linear-gradient(180deg, #000 0 50%, transparent 86%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, #000 0 6%, transparent 22% 78%, #000 94% 100%),
+    linear-gradient(180deg, #000 0 50%, transparent 86%);
+  mask-composite: intersect;
+  /* static — the exit dim covers this with the .turn__veil rather than fading
+     it (fading a masked layer repainted it every scrubbed frame). Dot colour is
+     literal ink, NOT rgba(var(--paper-ink)): the ink triplet flips light during
+     the dim and light dots would ghost through the veil's crossfade. */
+  opacity: .5;
 }
 /* paper grain — keeps the cream from reading dead-flat (this site banded
    before; the noise is the fix, not an ornament). Plain overlay, no blend
@@ -2411,10 +2536,25 @@ img, svg, canvas { display: block; }
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: inherit;
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: calc(.03 * var(--paperness, 1));
+  /* static at .03 — paints above the veil (::after generates after children),
+     which keeps a whisper of texture through the dim instead of a dead fade */
+  opacity: .03;
+}
+/* the brightness-dim veil — a solid dark layer over the paper surface (and its
+   dot/grain textures) but under the content. setupPaperDim scrubs only this
+   element's OPACITY (composited, zero repaint) instead of re-tinting the
+   full-viewport gradient via --from/--to every frame, which was the single
+   biggest paint cost at the Meet Focus → Inside Focus boundary. At opacity 1 it
+   is exactly #141414 — the same surface the next section opens on. */
+.turn__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #141414;
+  opacity: 0;
+  pointer-events: none;
 }
 .turn__inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; max-width: 1000px; margin: 0 auto; }
 
@@ -2477,32 +2617,96 @@ img, svg, canvas { display: block; }
   to   { transform: translateY(-12px); }
 }
 
-/* supporting line — sits over the phone's dissolved lower portion. In the flow
-   (mobile / reduced-motion) a negative margin pulls it up over the phone; in the
-   locked stage it's anchored to the bottom of the fixed frame instead (below),
-   so it can never be clipped by the pin regardless of the phone's height. */
-.turn__sub {
+/* ── side pairing — statement (left gutter) + subtext (right gutter) ────────
+   The two lines flank the floating phone, one in each side gutter, vertically
+   centred and centre-aligned. The heavier claim sits between the screen's left
+   edge and the phone; the quiet note between the phone and the screen's right
+   edge. The asymmetry (size + weight + ink alpha) keeps the hierarchy so neither
+   competes with the phone.
+
+   Reveal: --lp / --rp (0→1, set by setupMeetFocusBaseline) rise each block into
+   view. The text lives inside .turn__clip (overflow-hidden); the reveal is inner
+   translateY + opacity (composited, no transition — the scrub is the smoothing).
+   The column's own translateY(-50%) centring is a separate transform on a
+   separate element, so it never collides with the reveal. CSS default is 1/1
+   (fully shown) so reduced-motion / no-JS renders the final state. */
+.turn__baseline {
+  --lp: 1; --rp: 1;
   position: relative;
   z-index: 3;
-  margin: -32svh auto 0;
-  max-width: 740px;
-  font-size: clamp(15px, 1.5vw, 17px);
-  line-height: 1.6;
-  color: rgba(var(--paper-ink), .64);
-  text-wrap: balance;
+  margin: -30svh auto 0;
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(16px, 2.4vh, 28px);
+  text-align: center;
 }
-/* locked stage: anchor the sub to the bottom of the visible frame. Centred via
-   auto margins (not transform) so the .reveal translateY animation stays free.
-   Held close to the true bottom edge — this is a caption for the phone, not a
-   second block of copy competing with it for the frame. */
+.turn__lead {
+  max-width: 22ch;
+  font-size: clamp(17px, 2vw, 24px);
+  font-weight: 500;
+  line-height: 1.14;
+  letter-spacing: -.015em;
+  color: rgb(var(--paper-ink));
+}
+@media (max-width: 860px) {
+  /* mobile stacks in-flow with room to breathe — let it wrap there if needed */
+  .turn__lead { white-space: normal; }
+}
+.turn__note {
+  max-width: 46ch;
+  font-size: clamp(14px, 1.4vw, 16px);
+  font-weight: 400;
+  line-height: 1.62;
+  color: rgba(var(--paper-ink), .56);
+  text-wrap: pretty;
+}
+/* the reveal window — text rises into it. block so multi-line clips size right */
+.turn__clip { display: block; overflow: hidden; }
+/* opacity + translateY driven straight off the scrub var — no transition, the
+   scrub is already the smoothing (a transition here would lag/fight it). */
+.turn__lead .turn__clip {
+  opacity: var(--lp);
+  transform: translateY(calc((1 - var(--lp)) * 0.55em));
+}
+.turn__note .turn__clip {
+  opacity: var(--rp);
+  transform: translateY(calc((1 - var(--rp)) * 0.7em));
+}
+
+/* locked stage: both lines stack in the bottom-left corner, sharing a left
+   edge, clear of the phone (which sits centred and bleeds off the bottom). The
+   statement leads, the note sits beneath it. */
 @media (min-width: 861px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .turn__sub {
+  .turn__baseline {
+    container-type: inline-size;
     position: absolute;
-    left: 0; right: 0;
-    bottom: clamp(6px, 1.2vh, 14px);
-    margin: 0 auto;
-    width: min(740px, 86%);
+    right: auto; top: auto;
+    left: 0;
+    bottom: clamp(28px, 6vh, 60px);
+    margin: 0;
+    /* the full left gutter — from the screen edge to the phone's left edge —
+       so the block never crosses the (solid) phone. 31.76svh = the phone's
+       half-width, see the dot-grid note above. */
+    width: calc(50vw - 31.76svh);
+    max-width: none;
+    padding: 0 clamp(24px, 2.6vw, 52px);
+    align-items: flex-start;
+    gap: clamp(14px, 2vh, 22px);
+    text-align: left;
+    pointer-events: none;
   }
+  .turn__lead, .turn__note { max-width: none; }
+  /* the gutter's own width is driven by 50vw - 31.76svh (viewport HEIGHT,
+     not width), which a vw-based font clamp can't track — it desyncs and
+     either wraps or overflows depending on aspect ratio. Sizing off the
+     gutter's own inline size (cqw, on the container established above)
+     keeps "A way back to your own time." on one line at any width/height
+     combination this breakpoint allows. Ratio + 15% margin verified against
+     the sentence's measured character width. */
+  .turn__lead { font-size: clamp(15px, 6.2cqw, 24px); white-space: nowrap; }
 }
 
 @media (max-width: 860px) {
@@ -2510,7 +2714,9 @@ img, svg, canvas { display: block; }
      would bleed far off both sides), so the screen stays readable. */
   .turn__media { height: auto; width: min(92%, 430px); }
   .turn__media img { height: auto; width: 100%; }
-  .turn__sub { max-width: 42ch; }
+  /* no side room to flank on mobile — stack the pairing in flow, centred,
+     pulled up over the phone's lower portion. */
+  .turn__baseline { max-width: 44ch; }
 }
 
 /* ─────────────────────────────────────

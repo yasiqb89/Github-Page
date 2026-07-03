@@ -466,56 +466,63 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
       return;
     }
 
-    // ── Animated path: pinned horizontal scrub ───────────────
-    // Cards fade/slide in over the first sliver of the scrub, then the whole
-    // strip pans across the rest of it — so a plain vertical scroll walks you
-    // through all 22 cards, and the pin releases at the end to continue the page.
+    // ── Animated path: self-playing entrance, then free scroll ──
+    // No pin, no scroll-linked pan — the section is one ordinary viewport that
+    // never competes for the wheel. When it rises into view the cards deal in
+    // and the strip glides on its own to stage 06/22, teasing the rest off to
+    // the right. From there a downward scroll just carries on to the next
+    // section; the scrubber is how you wander through all 22 if you want to.
     gsap.set(cardEls.map(c => c.item), { opacity: 0, xPercent: 16 });
     if (foot) gsap.set(foot, { opacity: 0 });
+    gsap.set(scrubber, { opacity: 0 });
 
-    const tl = gsap.timeline();
-    tl.to(cardEls.map(c => c.item),
-      { opacity: 1, xPercent: 0, duration: 0.5, stagger: 0.012, ease: 'power2.out' }, 0);
-    tl.to(strip, { x: () => maxX, duration: 4.0, ease: 'none' }, 0.45);
-
-    // Pin length tracks the pan distance so the speed feels consistent across
-    // viewport widths (re-evaluated on refresh via the function form).
-    const PAN_RATIO = 0.62;
-    const pinDist = () => Math.max(window.innerHeight * 0.85, Math.abs(maxX) * PAN_RATIO);
-
-    let isScrubbing = () => false;
-    const st = ScrollTrigger.create({
-      trigger: pin,
-      start: 'top top',
-      end: () => '+=' + pinDist(),
-      // Low scrub: Lenis already smooths scroll, so a high value stacks a second
-      // ease and the strip drifts after you stop (reads as jitter). 0.4 tracks
-      // tightly while staying smooth.
-      scrub: 0.4,
-      pin: true,
-      animation: tl,
-      invalidateOnRefresh: true,
-      onUpdate: (self) => {
-        if (!isScrubbing()) setScrub(self.progress); // don't fight an active drag
-        rectsDirty = true;                            // cards moved — glow stale
-      },
-    });
-
-    // Reveal the scrubber + foot once the section settles into view.
-    ScrollTrigger.create({
-      trigger: pin, start: 'top 78%', once: true,
-      onEnter: () => gsap.to([scrubber, foot].filter(Boolean),
-        { opacity: 1, duration: 0.6, ease: 'power2.out', stagger: 0.08 }),
-    });
-
-    // Dragging the handle seeks the page scroll inside the pin range. Lenis owns
-    // the scroll, so we ask it to jump; ScrollTrigger then scrubs the strip.
-    isScrubbing = bindScrub((p) => {
-      const y = st.start + p * (st.end - st.start);
-      if (lenis) { try { lenis.scrollTo(y, { immediate: true }); } catch (_) { window.scrollTo(0, y); } }
-      else window.scrollTo(0, y);
+    // One 0–1 progress owns the strip x, the readout, and the glow-cache flag.
+    let curP = 0;
+    const applyP = (p) => {
+      curP = p;
+      gsap.set(strip, { x: p * maxX });
+      setScrub(p);
       rectsDirty = true;
+    };
+
+    // Entrance settles at this stage (index 5 → "06 / 22").
+    const restIndex = Math.min(5, stages.length - 1);
+    const restP = restIndex / (stages.length - 1);
+
+    const enter = { p: 0 };
+    const enterTl = gsap.timeline({ paused: true });
+    enterTl.to([scrubber, foot].filter(Boolean),
+      { opacity: 1, duration: 0.6, ease: 'power2.out' }, 0);
+    enterTl.to(cardEls.map(c => c.item),
+      { opacity: 1, xPercent: 0, duration: 0.6, stagger: 0.03, ease: 'power2.out' }, 0);
+    enterTl.to(enter,
+      { p: restP, duration: 1.7, ease: 'power2.inOut', onUpdate: () => applyP(enter.p) }, 0.35);
+
+    // Play it once, when the section rises into view.
+    ScrollTrigger.create({
+      trigger: pin, start: 'top 68%', once: true,
+      onEnter: () => enterTl.play(),
     });
+
+    // The scrubber owns the strip outright now: dragging (or arrow keys) cancels
+    // the entrance glide and pans directly — no page-scroll seeking, no lock.
+    bindScrub((p) => { enterTl.pause(); applyP(p); });
+
+    // Horizontal scroll over the cards row pans it directly. A trackpad sideways
+    // swipe reports deltaX; a mouse wheel with Shift held reports deltaY — both
+    // move the strip 1:1 with content pixels. Vertical intent is left untouched
+    // so it flows to Lenis and keeps scrolling the page. stopPropagation keeps
+    // Lenis from drifting the page during a sideways gesture.
+    wrap.addEventListener('wheel', (e) => {
+      const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+      const dx = horizontal ? e.deltaX : (e.shiftKey ? e.deltaY : 0);
+      if (!dx) return;                       // vertical intent → let the page scroll
+      e.preventDefault();
+      e.stopPropagation();
+      enterTl.pause();
+      const unit = e.deltaMode === 1 ? 16 : 1;         // line-mode wheels → px-ish
+      applyP(Math.min(1, Math.max(0, curP + (dx * unit) / Math.abs(maxX || 1))));
+    }, { passive: false });
 
     // ── Resize: recompute scale + travel + pin, then refresh ──
     let rt;
@@ -526,7 +533,7 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
         strip.style.setProperty('--strip-scale', stripScale.toFixed(4));
         requestAnimationFrame(() => {
           computeMax();
-          rectsDirty = true;
+          applyP(curP);          // keep the strip at the same stage post-resize
           ScrollTrigger.refresh();
         });
       }, 120);

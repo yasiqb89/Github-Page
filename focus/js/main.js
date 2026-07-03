@@ -43,7 +43,7 @@ async function init() {
 
   // Lenis smooth scroll — wired to GSAP ticker so ScrollTrigger stays in sync
   if (!reduced) {
-    lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
+    lenis = new Lenis({ lerp: 0.09, smoothWheel: true });
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add((time) => lenis.raf(time * 1000));
     gsap.ticker.lagSmoothing(0);
@@ -78,6 +78,8 @@ async function init() {
   setupHeroAtmosphere();
   setupMeetFocusHandoff();
   setupMeetFocusSheet();
+  setupMeetFocusBaseline();
+  setupPairHandshake();
   setupPaperDim();
   ScrollTrigger.refresh();
   // Webfonts (font-display: swap) can still be in flight here — a late swap
@@ -149,7 +151,13 @@ function setupMeetFocusSheet() {
   if (reduced) return; // CSS default --dock:1 renders the docked state
 
   turn.style.setProperty('--dock', '0');
-  const setDock = (self) => turn.style.setProperty('--dock', self.progress.toFixed(4));
+  let lastDock = '';
+  const setDock = (self) => {
+    const v = self.progress.toFixed(3);
+    if (v === lastDock) return;
+    lastDock = v;
+    turn.style.setProperty('--dock', v);
+  };
   ScrollTrigger.create({
     trigger: turn, start: 'top bottom', end: 'top top', scrub: true,
     onUpdate: setDock, onRefresh: setDock,
@@ -177,22 +185,98 @@ function setupMeetFocusSheet() {
   }
 }
 
+// ─── Meet Focus baseline — staged statement + subtext reveal ────────
+// The bottom pairing rises in two beats as the section scrolls up into its
+// lock: the heavy claim line first, the quiet note after. One scrub across the
+// entry window (top bottom → top top, the same runway the phone rises on) is
+// split into two overlapping sub-progresses — left over 0–0.55, right over
+// 0.45–1.0 — each eased out and written to --lp / --rp on .turn__baseline. Both
+// finish before 'top top' (the lock), so the staging is complete before the
+// brightness-dim runway begins and never fights the paper→dark crossfade.
+//
+// Perf: the two vars only drive opacity + translateY on the .turn__clip inners
+// (composited), and each value is quantised and skipped when unchanged, so a
+// scrubbed frame invalidates at most the one or two blocks mid-transition —
+// same discipline as setDock / the word-fill headlines.
+function setupMeetFocusBaseline() {
+  const base = document.querySelector('.turn__baseline');
+  if (!base || reduced) return; // CSS default --lp/--rp = 1 renders the shown state
+
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+  const sub = (p, lo, hi) => easeOut(Math.min(1, Math.max(0, (p - lo) / (hi - lo))));
+
+  base.style.setProperty('--lp', '0');
+  base.style.setProperty('--rp', '0');
+
+  let lastL = '', lastR = '';
+  const apply = (self) => {
+    const p = self.progress;
+    const l = sub(p, 0, 0.55).toFixed(2);
+    const r = sub(p, 0.45, 1).toFixed(2);
+    if (l !== lastL) { lastL = l; base.style.setProperty('--lp', l); }
+    if (r !== lastR) { lastR = r; base.style.setProperty('--rp', r); }
+  };
+
+  ScrollTrigger.create({
+    trigger: document.getElementById('turn'),
+    start: 'top bottom', end: 'top top', scrub: true,
+    onUpdate: apply, onRefresh: apply,
+  });
+}
+
+// ─── blocking section — the handshake ─────────────────────────
+// One narrative beat, played once as #block settles into view: the iPhone
+// mockup (the same block, on the phone) rises at the browser's lower-left
+// corner, the keyline breathes once, and the Paired chip settles onto the
+// chrome. Cause → effect; the pairing explains itself.
+//
+// CSS holds the SETTLED state (reduced-motion / no-JS renders the finished
+// scene); this sets the hidden initial states only when it will animate —
+// the same pattern as --dock / --lp. Everything tweened is transform /
+// opacity (composited), and the trigger is once:true so nothing lives on the
+// scroll path afterwards.
+function setupPairHandshake() {
+  const block = document.getElementById('block');
+  if (!block || reduced) return;
+
+  const phone  = block.querySelector('.pair-phone');
+  const chip   = block.querySelector('.pair-chip');
+  const flash  = block.querySelector('.block__flash');
+  if (!phone) return;
+
+  gsap.set(phone, { y: 22, autoAlpha: 0 });
+  gsap.set(chip,  { scale: .95, autoAlpha: 0 });
+
+  const tl = gsap.timeline({
+    scrollTrigger: { trigger: block, start: 'top 55%', once: true },
+  });
+  tl.to(phone, { y: 0, autoAlpha: 1, duration: .55, ease: 'power3.out' });
+  if (flash) {
+    tl.to(flash, { opacity: 1, duration: .18, ease: 'power2.out' }, 0.45);
+    tl.to(flash, { opacity: 0, duration: .7, ease: 'power2.inOut' }, 0.65);
+  }
+  tl.to(chip, { scale: 1, autoAlpha: 1, duration: .22, ease: 'power3.out' }, 0.55);
+}
+
 // ─── paper → Inside Focus: the locked brightness dim ────────
 // The exit is not a boundary — the paper itself dims, like screen brightness
 // turning down. On desktop the stage pins full-screen (CSS sticky) and the
 // section's extra height is a scroll runway; this timeline scrubs across that
 // runway with a settle hold at each end: content sits fully visible before the
-// dim starts, and reaches full dark before the lock releases. The surface goes
-// #141414, the ink flips to light, the texture fades, and --paper-accent
-// brightens from dark lime (readable on paper) to true brand lime — "meant to"
-// transforms into the traditional colour exactly as the dark section arrives.
-// Everything else is CSS-var-driven (surface, the ink triplet used in every
-// rgba(), halo, dots, painted headline words via data-sr-ink), so one timeline
-// dims the whole world in step. By the time the dark Inside Focus section
-// arrives, dark meets dark — no seam.
+// dim starts, and reaches full dark before the lock releases.
+//
+// Performance shape: the surface dim is the .turn__veil element's OPACITY — a
+// solid #141414 layer over the paper (and its dot/grain textures) but under
+// the content. Opacity is compositor-only, so the full-screen crossfade costs
+// zero repaint. The previous approach tweened --from/--to, which re-shaded the
+// whole viewport gradient on every scrubbed frame — the biggest single paint
+// cost at this boundary. Only the ink triplet (text) and --paper-accent still
+// tween as vars, because text colour has to actually repaint — but those are
+// small glyph areas, not the screen. Dark meets dark at the end — no seam.
 function setupPaperDim() {
   const turn = document.getElementById('turn');
   if (!turn || reduced) return;
+  const veil = turn.querySelector('.turn__veil');
 
   const locked = matchMedia('(min-width: 861px) and (hover: hover)').matches;
   // locked: scrub across the pin runway (top top → bottom bottom of the tall
@@ -204,11 +288,11 @@ function setupPaperDim() {
   const tl = gsap.timeline({ scrollTrigger: trigger });
   tl.to({}, { duration: locked ? 0.12 : 0.04 });   // settle — fully visible first
   tl.to(turn, {
-    '--from': '#141414', '--to': '#141414',
     '--paper-ink': '235, 238, 242',
     '--paper-accent': '#BFFF47',
-    '--paperness': 0, ease: 'none', duration: locked ? 0.76 : 0.92,
+    ease: 'none', duration: locked ? 0.76 : 0.92,
   });
+  if (veil) tl.to(veil, { opacity: 1, ease: 'none', duration: locked ? 0.76 : 0.92 }, '<');
   if (locked) tl.to({}, { duration: 0.12 });        // hold full-dark before release
 }
 
@@ -244,16 +328,22 @@ function setupProblemReveal() {
   const els = section.querySelectorAll('.problem__line');
   if (!els.length) return;
 
-  // Collect every word from all lines as one continuous sequence.
+  // Collect every word from all lines as one continuous sequence. The paint
+  // target (the .lime child, if any) is resolved ONCE — the fill used to run
+  // a querySelector per word per scrolled frame — and each word remembers its
+  // last painted alpha (quantised) so unchanged words cost nothing: per frame
+  // only the 2–3 words actually mid-transition invalidate style/paint.
   const allWords = [];
-  els.forEach((el) => allWords.push(...splitWords(el)));
+  els.forEach((el) => splitWords(el).forEach((w) => {
+    const lime = w.querySelector('.lime');
+    allWords.push({ el: lime || w, rgb: lime ? '191,255,71' : '230,235,241', last: -1 });
+  }));
 
   const paint = (w, alpha) => {
-    if (w.querySelector('.lime')) {
-      w.querySelector('.lime').style.color = `rgba(191,255,71,${alpha})`;
-    } else {
-      w.style.color = `rgba(230,235,241,${alpha})`;
-    }
+    const q = Math.round(alpha * 100);
+    if (q === w.last) return;
+    w.last = q;
+    w.el.style.color = `rgba(${w.rgb},${q / 100})`;
   };
 
   // Each word lights up in sequence, tied to scroll progress (0–1).
@@ -289,12 +379,19 @@ function setupProblemReveal() {
   const canHold = matchMedia('(min-width: 861px) and (hover: hover)').matches;
 
   // Mobile / touch: word fill as the section scrolls through, no hold.
+  let lastHold = '';
+  const setHold = (p) => {
+    const v = p.toFixed(2);
+    if (v === lastHold) return;
+    lastHold = v;
+    section.style.setProperty('--hold', v);
+  };
   if (!canHold) {
     ScrollTrigger.create({
       trigger: section, start: 'top 78%', end: 'top 12%', scrub: 1,
       onUpdate: (self) => {
         fill(self.progress);
-        section.style.setProperty('--hold', self.progress.toFixed(4));
+        setHold(self.progress);
       },
     });
     return;
@@ -315,7 +412,7 @@ function setupProblemReveal() {
       fill(p);
       // hold-progress cue: the kicker's ring fills as the manifesto fills,
       // telegraphing how long the pin lasts (see .problem__holdring)
-      section.style.setProperty('--hold', p.toFixed(4));
+      setHold(p);
     },
   });
 }
@@ -339,12 +436,20 @@ function setupKickerRings() {
     // --hold is set on the kicker itself and inherits down to the ring, so each
     // ring tracks its own eyebrow with no cross-section interference.
     if (reduced) { kicker.style.setProperty('--hold', 1); return; }
+    let last = '';
     ScrollTrigger.create({
       trigger: kicker,
       start: 'top bottom',   // eyebrow enters from the bottom edge
       end: 'top 35%',        // ring completes as it settles into reading position
       scrub: true,
-      onUpdate: (self) => kicker.style.setProperty('--hold', self.progress.toFixed(4)),
+      onUpdate: (self) => {
+        // quantised + deduped — 8 rings scrubbing at once must not add 8 style
+        // invalidations per scroll frame when their values haven't moved
+        const v = self.progress.toFixed(2);
+        if (v === last) return;
+        last = v;
+        kicker.style.setProperty('--hold', v);
+      },
     });
   });
 }
@@ -359,11 +464,20 @@ function setupReveals() {
 // ─── scroll-reveal headlines (Inspira-style per-word opacity) ───
 function setupScrollHeadlines() {
   document.querySelectorAll('[data-scroll-reveal]').forEach((el) => {
-    const words = splitWords(el);
     // Fill colour is white-ink by default; light sections override via
     // data-sr-ink="r,g,b" (e.g. the cream Meet Focus sheet fills in dark ink).
     const ink = el.dataset.srInk || '230,235,241';
-    if (reduced) { words.forEach((w) => { w.style.color = `rgba(${ink},1)`; const lime = w.querySelector('.lime'); if (lime) lime.style.opacity = '1'; }); return; }
+    // Resolve each word's paint target once (a querySelector per word per
+    // scrolled frame is DOM-query churn), and remember the last quantised
+    // value so unchanged words are skipped — per frame, only the 2–3 words
+    // actually mid-transition invalidate style/paint. Six of these headlines
+    // can be live near section boundaries at once; this is what keeps their
+    // combined cost negligible.
+    const words = splitWords(el).map((w) => {
+      const lime = w.querySelector('.lime');
+      return { el: lime || w, isLime: !!lime, last: -1 };
+    });
+    if (reduced) { words.forEach((w) => { if (w.isLime) w.el.style.opacity = '1'; else w.el.style.color = `rgba(${ink},1)`; }); return; }
 
     // Optional: drive this element's fill off another element's scroll position
     // (data-sr-trigger) so two headlines reveal in sync — e.g. the cost-section
@@ -381,15 +495,16 @@ function setupScrollHeadlines() {
           const wordEnd   = (i + 0.9) / words.length;
           const t = Math.max(0, Math.min(1, (p - wordStart) / (wordEnd - wordStart)));
           const eased = 1 - Math.pow(1 - t, 2);
-          const a = 0.15 + eased * 0.85;
-          const lime = w.querySelector('.lime');
-          if (lime) {
+          const q = Math.round((0.15 + eased * 0.85) * 100);
+          if (q === w.last) return;
+          w.last = q;
+          if (w.isLime) {
             // Drive opacity (not colour) so a clipped-gradient sheen — e.g. the
             // journey headline's lime words — survives the reveal; for solid lime
             // words this looks identical to fading the colour alpha.
-            lime.style.opacity = a;
+            w.el.style.opacity = q / 100;
           } else {
-            w.style.color = `rgba(${ink},${a})`;
+            w.el.style.color = `rgba(${ink},${q / 100})`;
           }
         });
       },
@@ -547,7 +662,19 @@ function setupCostReveal() {
 
   if (months) {
     months.style.setProperty('--reveal', '0');
-    const set = (self) => months.style.setProperty('--reveal', self.progress.toFixed(4));
+    // Quantise + skip no-change writes: each setProperty invalidates style for
+    // the subtree, so redundant writes are pure recalc churn on the scroll path.
+    let lastReveal = '';
+    const set = (self) => {
+      const v = self.progress.toFixed(3);
+      if (v === lastReveal) return;
+      lastReveal = v;
+      months.style.setProperty('--reveal', v);
+    };
+    // The burn edge travels via translateX(--reveal × --months-w); measure the
+    // strip once per refresh so the transform never needs a %-of-parent layout.
+    const measure = () => months.style.setProperty('--months-w', months.offsetWidth + 'px');
+    measure();
     // Anchored to #numbers itself (not .numbers__months) with end:'top top' —
     // the exact frame where #numbers' own CSS sticky lock engages. #numbers
     // freezes every child's viewport position once locked, so any scrub whose
@@ -558,7 +685,8 @@ function setupCostReveal() {
     // finishes exactly as the section arrives, on any viewport height.
     ScrollTrigger.create({
       trigger: section, start: 'top 85%', end: 'top top', scrub: true,
-      onUpdate: set, onRefresh: set,
+      onUpdate: set,
+      onRefresh: (self) => { measure(); set(self); },
     });
   }
 }

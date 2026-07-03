@@ -214,6 +214,7 @@
 ════════════════════════════════════════ -->
 <section class="turn" id="turn" style="--from:#F6F3EC;--to:#F6F3EC">
   <div class="turn__stage">
+    <div class="turn__veil" aria-hidden="true"></div>
     <div class="turn__inner wrap">
       <p class="kicker r-up" style="justify-content:center">Meet Focus</p>
       <h2 class="hed r-scroll turn__head" data-scroll-reveal data-sr-ink="var(--paper-ink)">Your day, spent the way<br>you <span class="lime voice">meant to</span>.</h2>
@@ -222,7 +223,15 @@
         <div class="turn__bloom" aria-hidden="true"></div>
       </div>
     </div>
-    <p class="turn__sub reveal">Focus brings habit modes, app boundaries, intentional sessions, and progress into one calm experience · so your time feels easier to guide, not harder to manage. No account required.</p>
+    <!-- Baseline pairing: a heavy statement line (left) and a quiet subtext
+         (right). Both scrub in from the bottom, staged — left first, right on
+         further scroll — via --lp/--rp driven by setupMeetFocusBaseline. Each
+         line's text lives in a .turn__clip (overflow-hidden) so the reveal is a
+         true rise into a window, not just a fade. -->
+    <div class="turn__baseline">
+      <p class="turn__lead"><span class="turn__clip">A way back to your own time.</span></p>
+      <p class="turn__note"><span class="turn__clip">The best parts of life rarely ask for attention as loudly as everything else. Make room for them by turning your phone from a source of drift into a place of calm direction.</span></p>
+    </div>
   </div>
 </section>
 
@@ -828,36 +837,41 @@
     <div class="block__copy">
       <p class="kicker r-up">Your attention</p>
       <h2 class="hed r-scroll" data-scroll-reveal>Protect what<br>pulls you <span class="lime">forward</span>.</h2>
-      <p class="pullquote reveal">
-        Turn focus into a lasting habit with simple schedules, guided sessions,
-        and smarter app limits designed to keep your day on track, without friction.
-      </p>
+      <!-- the pairing story in three quiet rows — staggers in via reveal-children -->
+      <div class="block__ledger reveal-children">
+        <div class="block__row"><span class="block__num">01</span><span>Start a session on your phone</span></div>
+        <div class="block__row"><span class="block__num">02</span><span>Your browser pairs with it, instantly</span></div>
+        <div class="block__row"><span class="block__num">03</span><span>End it, and everything unlocks together</span></div>
+      </div>
     </div>
 
-    <!-- right: Safari + iPhone combo mockup -->
+    <!-- right: the handshake — live Safari demo + the session running on a
+         partial iPhone at the window's corner. Decorative; the ledger carries
+         the story for AT. -->
     <div class="block__mockup-wrap block__mockup reveal">
       <div class="mockup-combo">
-      <div class="safari-crop">
-        <iframe class="safari-svg focus-flow-frame"
-                src="focus-flow.html"
-                scrolling="no"
-                loading="lazy"
-                title="Focus blocking a session — Deep Work mode">
-        </iframe>
+      <!-- inside the combo so it shares the window's exact left edge -->
+      <p class="block__tag" aria-hidden="true">Live flow — Deep Work</p>
+
+      <div class="block__window">
+        <div class="safari-crop">
+          <iframe class="safari-svg focus-flow-frame"
+                  src="focus-flow.html"
+                  scrolling="no"
+                  loading="lazy"
+                  title="Focus blocking a session — Deep Work mode">
+          </iframe>
+          <!-- one-shot keyline flash — pre-rendered lime glow, only opacity animates -->
+          <div class="block__flash" aria-hidden="true"></div>
+        </div>
+        <!-- paired chip — settles onto the window's top edge as the beat lands -->
+        <span class="pair-chip" aria-hidden="true"><span class="pair-chip__dot"></span>Paired</span>
       </div>
 
-      <!-- iPhone — real phone mockup PNG with live video playing on the screen.
-           The video is absolutely overlaid on the measured screen area (8.46% / 4.29%);
-           the PNG frame sits on top naturally via DOM order. -->
-      <div class="device-phone-wrap">
-        <img class="device-phone-img"
-             src="img/block-phone-mockup.png"
-             alt="Focus on iPhone — a blocked-app screen reading: Moment of Choice. Instagram is blocked during this focus session. Give the urge a moment to pass."
-             width="1419"
-             loading="lazy">
-        <video class="device-phone-video" autoplay muted loop playsinline>
-          <source src="img/block-phone-screen.mp4" type="video/mp4">
-        </video>
+      <!-- the session on your iPhone — a partial device (bottom dissolves):
+           the real blocking screen, so the block is shown, not implied -->
+      <div class="pair-phone" aria-hidden="true">
+        <img class="pair-phone__img" src="img/pair-phone-mockup.webp" width="900" height="1773" alt="" loading="lazy">
       </div>
 
       </div><!-- /.mockup-combo -->
@@ -983,7 +997,7 @@
     <div class="page-grid journey__header-grid">
       <div class="journey__head">
         <p class="kicker r-up">One identity</p>
-        <h2 class="hed r-scroll" data-scroll-reveal>Your <span class="lime">journey,</span> your<br><span class="lime">growth,</span> your <span class="lime voice">pattern.</span></h2>
+        <h2 class="hed r-scroll" data-scroll-reveal>Your <span class="lime">journey,</span> your<br><span class="lime">growth,</span> your <span class="lime">pattern.</span></h2>
       </div>
     </div>
     <div id="journeyDeck" aria-label="Identity stage journey"></div>
@@ -997,7 +1011,7 @@
 <section class="s s--blk get" id="get" style="--from:#141414;--to:#141414">
   <div class="wrap get__inner">
     <p class="kicker r-up" style="justify-content:center">Try Focus for free</p>
-    <h2 class="hed r-scroll get__title" data-scroll-reveal>Your best <span class="lime voice">hours</span><br>start here.</h2>
+    <h2 class="hed get__title reveal">Your best <span class="lime voice">hours</span><br>start here.</h2>
     <p class="get__sub reveal">31 habit modes, the full identity journey, and the shield that holds · no account required.</p>
     <div class="get__stores reveal-children">
       <span class="store-btn store-btn--lime is-soon" aria-disabled="true">
