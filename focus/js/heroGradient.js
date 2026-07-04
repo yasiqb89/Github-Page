@@ -119,13 +119,22 @@ export function initHeroGradient(canvas) {
   const uRes = gl.getUniformLocation(prog, 'u_res');
   const uTime = gl.getUniformLocation(prog, 'u_time');
 
-  const SCALE = 0.55;                 // render below native res — softer + cheap
-  const BUDGET = 900;                 // …and never exceed this backing long-edge
+  // Render as a fraction of DEVICE pixels, not CSS pixels. The old version
+  // scaled CSS px and ignored DPR, so on a 2x display the backing ended up
+  // ~1/3.6 of the shown size — and the per-fragment anti-band dither, sampled
+  // once per backing pixel, got magnified into visible coarse grain on the
+  // upscale. Targeting a fraction of device px keeps the aura soft but caps the
+  // upscale near ~1.5-1.8x, so the dither reads as fine noise again. Still
+  // cheap: a 3-octave fbm at 30fps, gated to when the hero is on screen.
+  const SCALE = 0.7;                  // fraction of device resolution — soft, not blocky
+  const BUDGET = 1600;                // max backing long-edge, in device px
   function resize() {
     const r = canvas.getBoundingClientRect();
-    const s = Math.min(SCALE, BUDGET / Math.max(r.width, r.height, 1));
-    const w = Math.max(2, Math.round(r.width * s));
-    const h = Math.max(2, Math.round(r.height * s));
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const devW = r.width * dpr, devH = r.height * dpr;
+    const s = Math.min(SCALE, BUDGET / Math.max(devW, devH, 1));
+    const w = Math.max(2, Math.round(devW * s));
+    const h = Math.max(2, Math.round(devH * s));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform2f(uRes, canvas.width, canvas.height);

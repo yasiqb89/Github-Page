@@ -57,6 +57,10 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   // first successful getContext(), so 2D can only be requested here if GL
   // creation failed (old browser, GPU disabled, context limit hit, etc).
   const glR = createFieldGL(canvas, N_BASE);
+  // Pay the driver's lazy shader-pipeline-compile cost right now, while the
+  // page is still loading — not on the section's first real scrolled-in
+  // frame (see afGL.js's warmup() for why that's where the stutter was).
+  if (glR.supported) glR.warmup();
   const ctx = glR.supported ? null : canvas.getContext('2d');
   const reduced  = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -172,16 +176,20 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   const pK  = new Float32Array(N);
   const pSw = new Float32Array(N);
 
-  // particles begin scattered, then assemble into the rest orb on entry
-  const curS = new Float32Array(N * 2);
+  // Per-particle morph character (arrival rate + curl) — still used for the
+  // hover transitions, when the ring morphs into each feature glyph.
   for (let i = 0; i < N; i++) {
     rnd[i] = Math.random();
     pK[i]  = 0.062 + rnd[i] * 0.05;
     pSw[i] = rnd[i] > 0.82 ? (rnd[i] > 0.91 ? 0.022 : -0.022) : 0;
-    const a = Math.random() * 6.2832, r = 200 + Math.random() * 200;
-    curS[i*2] = Math.cos(a) * r; curS[i*2+1] = Math.sin(a) * r;
   }
-  if (reduced) curS.set(restT);
+  // Start already formed as the rest ring — no scatter-to-ring assembly on
+  // scroll-in. That fly-in put every one of the ~1600 particles in large-delta
+  // motion across a wide area exactly as the section entered (right when the
+  // scroll is being scrutinised), and it wasn't wanted anyway: the ring simply
+  // being present reads cleaner. Hover morphs still animate from here.
+  const curS = new Float32Array(N * 2);
+  curS.set(restT);
 
   // ── sizing ──
   const dpr = Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5);

@@ -60,7 +60,13 @@ async function init() {
   // ~1.9 calls/frame), doubling every scrubbed callback and style write on the
   // scroll path, sitewide.
   if (!reduced && !NATIVE) {
-    lenis = new Lenis({ lerp: 0.09, smoothWheel: true });
+    // lerp 0.09 -> 0.12: a lower lerp means the displayed scroll position
+    // takes longer to converge on the real target, so any main-thread frame
+    // that runs long (style recalc, paint, GC) leaves more catch-up distance
+    // for Lenis to visibly correct over the following frames — that
+    // correction IS the jitter. A slightly higher lerp shortens that window
+    // without giving up the smoothing glide entirely.
+    lenis = new Lenis({ lerp: 0.12, smoothWheel: true });
     gsap.ticker.add((time) => lenis.raf(time * 1000));
     gsap.ticker.lagSmoothing(0);
   }
@@ -950,10 +956,15 @@ function setupMosaicVelocity() {
     start: 'top bottom',
     end: 'bottom top',
     onUpdate(self) {
-      const lean = gsap.utils.clamp(-1.2, 1.2, self.getVelocity() / -450);
+      // Softened from ±1.2° / vel÷450: the skew flips sign with scroll
+      // direction, so a firm ±1.2° made the strips visibly rock when scrolling
+      // up and down — reading as jitter rather than "weight". ±0.5° with a less
+      // sensitive divisor keeps the subtle lean on fast flicks but stays near
+      // flat during ordinary scrubbing.
+      const lean = gsap.utils.clamp(-0.5, 0.5, self.getVelocity() / -900);
       setters.forEach((set) => set(lean));
       if (settle) settle.kill();
-      settle = gsap.delayedCall(0.12, () => setters.forEach((set) => set(0)));
+      settle = gsap.delayedCall(0.1, () => setters.forEach((set) => set(0)));
     },
   });
 }
@@ -1047,13 +1058,14 @@ function setupHeroDevices() {
       const exitY = -e * EXIT_DIST * p.depth;
       const x = e * p.driftX;
       const rot = p.base + e * p.peel;
-      // The idle bob drifts ~0.1px/frame — at 0.5px quantisation most frames
-      // write nothing at all (imperceptible on a slow float), instead of two
-      // style invalidations per phone per frame competing with the scroll.
-      const y = Math.round((f + introY + exitY) * 2) / 2;
-      const tf =
-        `translate(-50%,-50%) translate(${x.toFixed(1)}px, ${y}px) rotate(${rot.toFixed(2)}deg)`;
-      if (tf !== p.lastTf) { p.lastTf = tf; p.el.style.transform = tf; }
+      // Sub-pixel precision (0.01px) — the idle bob drifts only ~0.1px/frame,
+      // so ANY coarser rounding makes it visibly step/stutter instead of
+      // gliding. This is only two elements; writing their transform every frame
+      // costs nothing worth quantising away (an earlier 0.5px "optimisation"
+      // here was the source of the hero phones' jitter).
+      const y = (f + introY + exitY).toFixed(2);
+      p.el.style.transform =
+        `translate(-50%,-50%) translate(${x.toFixed(2)}px, ${y}px) rotate(${rot.toFixed(2)}deg)`;
       if (op !== p.lastOp) { p.lastOp = op; p.el.style.opacity = op; }
     }
     if (running) rafId = requestAnimationFrame(frame);

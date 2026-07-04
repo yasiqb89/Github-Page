@@ -186,6 +186,51 @@ export function createFieldGL(canvas, maxParticles) {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
     },
+    // Force the driver to fully compile/link/validate BOTH programs right now,
+    // while the page is still loading and nothing is visible — not on the
+    // canvas's first real frame. gl.compileShader/linkProgram queue work; many
+    // WebGL driver implementations don't finish the actual pipeline setup
+    // until a program is exercised by an honest draw call. Left alone, that
+    // first real draw happens exactly when this section scrolls into view
+    // (see storyboard.js's IntersectionObserver-gated loop) — a one-time
+    // stutter tied precisely to "scroll into Inside Focus," every page load.
+    // A throwaway 1×1 draw with each program pays that cost up front instead.
+    warmup() {
+      const savedBw = bw, savedBh = bh;
+      gl.viewport(0, 0, 1, 1);
+
+      gl.useProgram(particleProg);
+      gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, cpuBuf.subarray(0, STRIDE), gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(pLoc.aPos);
+      gl.vertexAttribPointer(pLoc.aPos, 2, gl.FLOAT, false, STRIDE * 4, 0);
+      gl.enableVertexAttribArray(pLoc.aSize);
+      gl.vertexAttribPointer(pLoc.aSize, 1, gl.FLOAT, false, STRIDE * 4, 8);
+      gl.enableVertexAttribArray(pLoc.aAlpha);
+      gl.vertexAttribPointer(pLoc.aAlpha, 1, gl.FLOAT, false, STRIDE * 4, 12);
+      gl.uniform2f(pLoc.uResolution, 1, 1);
+      gl.uniform1f(pLoc.uDpr, 1);
+      gl.uniform3f(pLoc.uColor, 0, 0, 0);
+      gl.drawArrays(gl.POINTS, 0, 1);
+
+      gl.useProgram(washProg);
+      gl.bindBuffer(gl.ARRAY_BUFFER, washBuf);
+      gl.enableVertexAttribArray(wLoc.aUnit);
+      gl.vertexAttribPointer(wLoc.aUnit, 2, gl.FLOAT, false, 0, 0);
+      gl.uniform2f(wLoc.uCenter, 0, 0);
+      gl.uniform1f(wLoc.uRadius, 0.001);
+      gl.uniform2f(wLoc.uResolution, 1, 1);
+      gl.uniform1f(wLoc.uDpr, 1);
+      gl.uniform3f(wLoc.uColor, 0, 0, 0);
+      gl.uniform1f(wLoc.uAlphaScale, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      // restore whatever real viewport was already set (resize() runs again
+      // right after this in storyboard.js anyway, but leave no trace either way)
+      gl.viewport(0, 0, savedBw || 1, savedBh || 1);
+    },
     dispose() {
       gl.deleteProgram(particleProg);
       gl.deleteProgram(washProg);
