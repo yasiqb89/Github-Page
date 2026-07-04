@@ -180,9 +180,19 @@ function buildCard(stage) {
 // ── Tilt + lime glow on hover ─────────────────────────────
 // Tilt is applied to the icard__tilt wrapper so it stays separate from the CSS
 // flip transition on icard__body — both live on different elements.
+// Last page-scroll timestamp, shared across the hover/glow systems below so
+// pointer handlers can avoid getBoundingClientRect while the page is in
+// motion — ScrollTrigger callbacks dirty styles every scrolled frame, so a
+// rect read in that window forces a synchronous layout (measured stutter
+// source when moving the mouse while scrolling through the strip). Updated by
+// initJourney's scroll listener.
+let _scrollTs = -1e9;
+const _scrolling = () => performance.now() - _scrollTs < 150;
+
 function attachHover(card, tilt, face, glare, shimmer, reduced) {
   if (reduced || !matchMedia('(hover: hover)').matches) return;
   let rX = 0, rY = 0, tX = 0, tY = 0, raf = null, inside = false;
+  let faceR = null, backR = null;   // cached rects — reused mid-scroll
   const MAX = 18, LERP = 0.10;
 
   function loop() {
@@ -203,7 +213,11 @@ function attachHover(card, tilt, face, glare, shimmer, reduced) {
   });
   face.addEventListener('mousemove', (e) => {
     if (card.classList.contains('is-flipped')) return;
-    const r = face.getBoundingClientRect();
+    // fresh rect only while the page is still; reuse the cache mid-scroll
+    // (a stale tilt origin for ~150ms is invisible — a forced layout isn't)
+    if (!_scrolling()) faceR = face.getBoundingClientRect();
+    else if (!faceR) return;
+    const r = faceR;
     const px = (e.clientX - r.left) / r.width;
     const py = (e.clientY - r.top)  / r.height;
     tX = (0.5 - py) * MAX;
@@ -226,7 +240,9 @@ function attachHover(card, tilt, face, glare, shimmer, reduced) {
   if (back && !reduced) {
     back.addEventListener('mouseenter', () => { inside = true; });
     back.addEventListener('mousemove', (e) => {
-      const r  = back.getBoundingClientRect();
+      if (!_scrolling()) backR = back.getBoundingClientRect();
+      else if (!backR) return;
+      const r  = backR;
       const px = (e.clientX - r.left) / r.width;
       const py = (e.clientY - r.top)  / r.height;
       tX = (0.5 - py) * MAX;
@@ -309,11 +325,17 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
   const countEl = scrubber.querySelector('.journey__scrub-count');
   const nameEl  = scrubber.querySelector('.journey__scrub-name');
 
-  // Paint the bar + readout for a 0–1 progress value.
+  // Paint the bar + readout for a 0–1 progress value. Only 22 possible stage
+  // indices exist, so most consecutive frames of the entrance glide (or a
+  // scrubber drag) land on the SAME index — write the text/attribute only when
+  // it actually changes, instead of a textContent + attribute write every frame.
+  let lastIdx = -1;
   const setScrub = (p) => {
     p = p < 0 ? 0 : p > 1 ? 1 : p;
     scrubber.style.setProperty('--p', p.toFixed(4));
     const idx = Math.round(p * (stages.length - 1));
+    if (idx === lastIdx) return;
+    lastIdx = idx;
     countEl.textContent = String(idx + 1).padStart(2, '0') + ' / ' + stages.length;
     nameEl.textContent  = stages[idx].name;
     track.setAttribute('aria-valuenow', String(idx + 1));
@@ -420,6 +442,11 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
     let pmx = -9999, pmy = -9999, movePending = false;
     const processGlow = () => {
       movePending = false;
+      // Mid-scroll, recomputeCenters would be 22 rect reads into a frame whose
+      // styles ScrollTrigger just dirtied — a forced layout per pointer-move.
+      // Skip entirely; the first settled pointer-move re-runs with fresh rects
+      // (rectsDirty stays set until then).
+      if (_scrolling()) return;
       if (rectsDirty) recomputeCenters();
       let needTick = false;
       for (let i = 0; i < cardEls.length; i++) {
@@ -447,7 +474,10 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
         pmx = e.clientX; pmy = e.clientY;
         if (!movePending) { movePending = true; requestAnimationFrame(processGlow); }
       }, { passive: true });
-      window.addEventListener('scroll', () => { if (glowEnabled) rectsDirty = true; }, { passive: true });
+      window.addEventListener('scroll', () => {
+        _scrollTs = performance.now();          // shared gate for tilt + glow rect reads
+        if (glowEnabled) rectsDirty = true;
+      }, { passive: true });
     }
 
     // ── Reduced-motion / no-GSAP: native horizontal scroll + live bar ──

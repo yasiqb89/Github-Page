@@ -191,8 +191,15 @@ function createNoiseField(container, section) {
       rec.rx += (tx - rec.rx) * 0.12;
       rec.ry += (ty - rec.ry) * 0.12;
       // CSS `translate` composes with gsap's `transform` — entry/exit tweens
-      // and the drift never fight over the same property
-      rec.el.style.translate = `${rec.rx.toFixed(2)}px ${(rec.ry + par).toFixed(2)}px`;
+      // and the drift never fight over the same property. Quantised to 0.25px
+      // and deduped: when the pointer is far and the hold isn't advancing, the
+      // lerp converges and every banner's write is skipped entirely — this
+      // loop runs for the whole pinned problem section, alongside the word
+      // fill, so idle frames must cost nothing.
+      const qx = Math.round(rec.rx * 4) / 4;
+      const qy = Math.round((rec.ry + par) * 4) / 4;
+      const tr = `${qx}px ${qy}px`;
+      if (tr !== rec.lastTr) { rec.lastTr = tr; rec.el.style.translate = tr; }
     });
     raf = requestAnimationFrame(tick);
   }

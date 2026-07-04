@@ -141,9 +141,15 @@ img, svg, canvas { display: block; }
 }
 #nav.nav--hidden { transform: translateY(-100%); }
 #nav.scrolled {
-  background: rgba(14,16,13,.55);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  backdrop-filter: blur(20px) saturate(1.4);
+  /* backdrop-filter must re-sample everything behind it any time that content
+     moves — which, under a fixed nav, is every scroll frame, for virtually the
+     entire scroll session (this class is on for all but the first 40px). A
+     smaller blur radius and one less filter pass (saturate) meaningfully cuts
+     that per-frame sampling cost; the tint below recovers the saturation lift
+     without a second filter operation. */
+  background: rgba(17,20,14,.62);
+  -webkit-backdrop-filter: blur(11px);
+  backdrop-filter: blur(11px);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 30px -14px rgba(0,0,0,.55);
 }
 .nav__line {
@@ -710,13 +716,27 @@ img, svg, canvas { display: block; }
    HERO
 ───────────────────────────────────── */
 .hero { min-height: 100svh; position: relative; overflow: hidden; --hero-atmo: 1; }
-/* atmospheric glow — soft lime/cyan light pooled on the right, behind the grid.
-   Fades out toward the bottom so it dissolves into the next section. */
-.hero::before {
-  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+/* Shared fade wrapper — the scroll-driven opacity/translateY that dissolves the
+   hero's atmosphere lives HERE, on a plain unmasked element, instead of on each
+   masked/blended layer directly. A masked layer's resolved bitmap is cached by
+   the compositor and only needs re-resolving when its OWN content changes; an
+   ancestor's opacity animating on top of it is a cheap, separate blend. Putting
+   --hero-atmo on the three masked/blended children themselves (the previous
+   approach) forced the mask-combine step to re-run every scrolled frame, for
+   three full-viewport layers, through the entire hero-exit scroll — the very
+   first gesture a visitor makes. Masks, blend mode and fade shapes below are
+   byte-for-byte the same as before; only where the animated property lives
+   changed. */
+.hero__atmo {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
   opacity: var(--hero-atmo, 1);
   transform: translateY(calc((1 - var(--hero-atmo, 1)) * -30px));
   will-change: opacity, transform;
+}
+/* atmospheric glow — soft lime/cyan light pooled on the right, behind the grid.
+   Fades out toward the bottom so it dissolves into the next section. */
+.hero__atmo::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
   background:
     radial-gradient(58% 64% at 80% 34%, rgba(191,255,71,.11), transparent 70%),
     radial-gradient(72% 82% at 98% 62%, rgba(90,200,250,.07), transparent 68%),
@@ -726,21 +746,16 @@ img, svg, canvas { display: block; }
 }
 /* Ambient aura — WebGL liquid-silk gradient (js/heroGradient.js) behind the
    grid. Screen-blended so only its light adds over the dark hero; pooled right
-   and faded toward the bottom + with --hero-atmo as the hero scrolls away. */
+   and faded toward the bottom via the wrapper's --hero-atmo above. */
 .hero__aura {
-  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0;
+  position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none; mix-blend-mode: screen;
-  opacity: var(--hero-atmo, 1);
-  transform: translateY(calc((1 - var(--hero-atmo, 1)) * -30px));
-  will-change: opacity, transform;
   -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent 100%);
           mask-image: linear-gradient(180deg, #000 60%, transparent 100%);
 }
 .hero__grid {
-  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
-  opacity: calc(.78 * var(--hero-atmo, 1));
-  transform: translateY(calc((1 - var(--hero-atmo, 1)) * -30px));
-  will-change: opacity, transform;
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  opacity: .78;
   /* pool the grid right + fade behind the headline (radial) AND dissolve toward
      the bottom (linear) so there's no hard edge at the section seam */
   -webkit-mask-image:
@@ -1168,6 +1183,11 @@ img, svg, canvas { display: block; }
 .af { padding: 0; position: relative; }
 
 /* ambient particle field — fills the section, sits behind the copy.
+   The idle ring stays visible at rest, but the big radial GLOW WASH is gated to
+   hover (see washEngage in storyboard.js): that pooled glow is what made the
+   section read as a separate glowing block, so at rest it's just a small
+   contained ring on the same flat #141414 as its neighbours (Your attention,
+   etc.), and the wash blooms in only as you engage a tool.
    No edge mask: the baked glow wash already falls radially to transparent and
    the section bg is the same #141414 as its neighbours, so the field dissolves
    on its own. (The old mask-image linear edge-fades added an 8-bit ramp that
@@ -1176,18 +1196,6 @@ img, svg, canvas { display: block; }
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   z-index: 0; display: block; pointer-events: none;
-}
-/* film grain — filmic texture over the field, below the copy. This is the
-   dither that breaks any residual 8-bit step in the (now faint) glow, and adds
-   a premium, tactile finish. No mask: full-bleed noise over a flat #141414
-   neighbour has no seam to hide. */
-.af__grain {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  opacity: .10; mix-blend-mode: soft-light;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-  /* static — a moving background-position repaints this soft-light layer
-     every frame and tanks scroll perf; the grain reads fine as a still. */
 }
 
 .af__stage {
@@ -1200,11 +1208,21 @@ img, svg, canvas { display: block; }
   text-align: center;
 }
 
-/* ── copy: frozen kicker + single morphing headline/line ── */
+/* ── copy: frozen kicker + morphing headline + hover subhead ──
+   The headline still morphs between the rest statement and each tool's name
+   (setActive/setDefault → morphCopy). What changed: the per-tool ONE-LINER
+   used to replace the ambient hover hint below the icon row (.af__line) — now
+   that hint holds its text permanently (never rewritten) and only dims, while
+   the tool's description appears as a subhead directly under its name here,
+   like a headline/deck pairing. min-height is sized for the tallest combo
+   (a two-line hover title + its two-line description) so the icon row below
+   never shifts — .af__stage's space-between pins it to the bottom regardless
+   of .af__copy's height, but reserving the space keeps the page's own height
+   from breathing under the cursor. */
 .af__copy {
   width: 100%; max-width: 720px;
   display: flex; flex-direction: column; align-items: center;
-  min-height: clamp(140px, 20vh, 200px);
+  min-height: clamp(190px, 27vh, 265px);
 }
 .af__kicker { margin-bottom: 14px; }
 .af__title {
@@ -1220,8 +1238,13 @@ img, svg, canvas { display: block; }
   background-size: 220% 100%;
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
+  /* Clipped-gradient text repaints its glyphs every frame the animation runs —
+     paused until the section is actually on screen (toggled in main.js) so it
+     doesn't cost anything scrolled away, same as the turn-bob idle phone. */
   animation: af-shimmer 4.5s var(--ease) infinite;
+  animation-play-state: paused;
 }
+#overview.is-in-view .af__title .lime { animation-play-state: running; }
 @keyframes af-shimmer {
   0%   { background-position: 120% 0; }
   100% { background-position: -20% 0; }
@@ -1231,14 +1254,28 @@ img, svg, canvas { display: block; }
 @media (prefers-reduced-motion: reduce) {
   .af__title .lime { animation: none; }
 }
-/* Morphing caption — now an eyebrow beneath the icon row. Small, uppercase,
-   letter-spaced; shows the hover hint at rest and each tool's one-liner on hover.
-   min-height reserves ~2 lines so the icons above don't bounce as it morphs. */
+/* Hover subhead — each tool's one-liner, revealed directly beneath its name
+   (storyboard.js morphCopy). Empty and invisible at rest; a plain body-copy
+   voice (not the small-caps eyebrow treatment below) so it reads as the
+   headline's own subtitle, not another caption. */
+.af__desc {
+  font-size: clamp(15px, 1.6vw, 19px); color: var(--ink-2);
+  font-weight: 500; line-height: 1.55; letter-spacing: -.005em;
+  max-width: 46ch; margin: 6px 0 0;
+  text-shadow: 0 2px 12px rgba(0,0,0,.35);
+}
+
+/* Ambient hover hint — permanent text (never rewritten; see storyboard.js),
+   an eyebrow beneath the icon row. Dims — doesn't vanish — while a tool's own
+   description (above) is showing, so the row still reads as instructional
+   rather than looking like it lost a line. */
 .af__line {
   font-size: clamp(11px, 1.05vw, 13px); color: rgba(255,255,255,.5);
   font-weight: 600; line-height: 1.5; letter-spacing: .14em;
   text-transform: uppercase; max-width: 52ch;
-  min-height: 3em; text-shadow: none;
+  text-shadow: none;
+  /* opacity dim is driven by GSAP (storyboard.js setHintDim), not CSS — no
+     transition here, so the two don't fight over the same property */
 }
 
 /* ── feature row + caption group, anchored at the bottom of the stage ── */
@@ -1286,7 +1323,6 @@ img, svg, canvas { display: block; }
   .af__row { gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .af__grain { animation: none; }
   .af__title .lime { animation: none; }
   .af__exhibit { transition: opacity .2s linear !important; filter: none !important; }
 }
@@ -1328,8 +1364,9 @@ img, svg, canvas { display: block; }
   opacity: 1; visibility: visible;
   transform: translateY(-50%) scale(1); transition-delay: 0s;
 }
-/* particle field eases back so exhibits lead the eye — but stays clearly alive
-   and bright (no shade pool — content blends straight into the field) */
+/* while an exhibit card is showing, the whole field eases back to .66 so the
+   card leads the eye — but stays clearly alive (no shade pool; content blends
+   straight into the field). The idle ring itself is always at full opacity. */
 .af__canvas { transition: opacity .6s var(--ease); }
 .af.is-exhibiting .af__canvas { opacity: .66; }
 
@@ -1754,16 +1791,27 @@ img, svg, canvas { display: block; }
   max-height: 150px;
   overflow: hidden;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 65%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 65%, transparent 100%);
+}
+/* Edge fade — was a mask-image, which forces the whole masked subtree into an
+   offscreen buffer that RE-COMPOSITES every frame while the ~25 scroll-scrubbed
+   cards inside it move + the strips skew (this was the section's scroll jitter).
+   The section background is a flat #141414, so an opaque-#141414 gradient
+   overlay fades the edges to the exact same colour with zero mask machinery.
+   Sits above the tiles, axis-aligned (never skews with the strips). */
+.modes__mosaic::after {
+  content: '';
+  position: absolute; inset: 0; z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(to bottom, #141414 0%, transparent 30%, transparent 65%, #141414 100%);
 }
 /* upper strip — sits above the pills, fades out at the bottom edge */
 .modes__mosaic--top {
   margin-top: 0;
   margin-bottom: 8px;
   max-height: 120px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 35%, black 65%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 35%, black 65%, transparent 100%);
+}
+.modes__mosaic--top::after {
+  background: linear-gradient(to bottom, #141414 0%, transparent 35%, transparent 65%, #141414 100%);
 }
 .modes__mg {
   display: grid;
@@ -1771,6 +1819,11 @@ img, svg, canvas { display: block; }
   grid-auto-rows: 64px;
   grid-auto-flow: dense;
   gap: 6px;
+  /* The scroll-velocity lean (setupMosaicVelocity) skews these two strips every
+     scroll frame. Promote each to its own compositor layer so the skew is a
+     cheap transform composite, not a repaint of 31 tiled images. Two layers
+     only — well within budget. */
+  will-change: transform;
 }
 /* collage rhythm — interspersed feature tiles break the grid up */
 .mc:nth-child(7n+1) { grid-column: span 2; grid-row: span 2; } /* large */
@@ -1972,8 +2025,11 @@ img, svg, canvas { display: block; }
   background-size: 220% 100%;
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
+  /* Paused off-screen — see #overview.is-in-view above; same reasoning. */
   animation: af-shimmer 4.5s var(--ease) infinite;
+  animation-play-state: paused;
 }
+#journey.is-in-view .journey__head .hed .lime { animation-play-state: running; }
 @media (prefers-reduced-motion: reduce) {
   .journey__head .hed .lime { animation: none; }
 }
@@ -2610,7 +2666,11 @@ img, svg, canvas { display: block; }
   pointer-events: none;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .turn__media img { animation: turn-bob 7s ease-in-out infinite alternate; }
+  /* paused until #turn is anywhere near the viewport (see the toggleClass
+     ScrollTrigger in setupMeetFocusSheet) — an infinite animation has no
+     natural reason to keep ticking on the compositor while scrolled away. */
+  .turn__media img { animation: turn-bob 7s ease-in-out infinite alternate; animation-play-state: paused; }
+  .turn.is-in-view .turn__media img { animation-play-state: running; }
 }
 @keyframes turn-bob {
   from { transform: translateY(0); }

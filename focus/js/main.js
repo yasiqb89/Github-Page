@@ -29,7 +29,14 @@ const STAGES = [
   { n: 21, name: 'The Eternal' },      { n: 22, name: 'The Luminous' },
 ];
 
-const QA = new URLSearchParams(location.search).has('qa');
+const PARAMS = new URLSearchParams(location.search);
+const QA = PARAMS.has('qa');
+// ?native=1 — bypass Lenis and scroll natively (compositor-driven). The
+// definitive A/B for scroll feel: with Lenis, every scrolled frame is produced
+// by JavaScript on the main thread, so ANY long frame stalls the page itself;
+// native scroll can never be blocked by script. All ScrollTriggers work
+// unchanged either way (they read the real scroll position).
+const NATIVE = PARAMS.has('native');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // shared state between setupModeInteractions and setupModesMosaic
@@ -41,10 +48,19 @@ async function init() {
   if (!QA) await runPreloader();
   else document.getElementById('preloader')?.classList.add('is-done');
 
-  // Lenis smooth scroll — wired to GSAP ticker so ScrollTrigger stays in sync
-  if (!reduced) {
+  // Lenis smooth scroll — driven from the GSAP ticker so the scroll write and
+  // the tweens share one clock. Skipped for reduced-motion AND for ?native=1
+  // (see NATIVE above) — every consumer already handles lenis === null.
+  //
+  // NOTE: deliberately NOT wired as lenis.on('scroll', ScrollTrigger.update).
+  // Lenis here runs in native-scroll mode, so every scroll it animates emits a
+  // real window scroll event — which ScrollTrigger's own built-in listener
+  // already handles. Adding the explicit hook made every ScrollTrigger update
+  // pass run ~2× per frame (measured in a trace: the internal update fn showed
+  // ~1.9 calls/frame), doubling every scrubbed callback and style write on the
+  // scroll path, sitewide.
+  if (!reduced && !NATIVE) {
     lenis = new Lenis({ lerp: 0.09, smoothWheel: true });
-    lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add((time) => lenis.raf(time * 1000));
     gsap.ticker.lagSmoothing(0);
   }
@@ -52,6 +68,8 @@ async function init() {
   initMagnetic();
   setupAnchors();
   setupKickerRings();
+  setupShimmerGating();
+  setupFlowDemo();
   setupReveals();
   setupScrollHeadlines();
   setupSlider();
@@ -86,6 +104,82 @@ async function init() {
   // reflows text and staggers every cached trigger boundary sitewide. Re-measure
   // once they settle so nothing jitters into place mid-scroll.
   document.fonts?.ready.then(() => ScrollTrigger.refresh());
+}
+
+// ─── flow demo iframe — deferred one-shot load ──────────────
+// The embedded "Live flow" demo (focus-flow.html) is a self-playing generated
+// bundle (a design-tool export, not hand-maintained — its internals aren't
+// something to patch) with its own animation loop.
+//
+// Earlier this observer also UNLOADED the iframe (src='about:blank') when it
+// scrolled out of range, to reclaim the loop's cost — but a trace showed the
+// real price of that: the bundle is ~650KB and re-parses/compiles (~100ms hard
+// freeze) EVERY time it re-enters, so scrolling up and down past #block
+// thrashed it (four 100ms hitches in one pass). Unloading it traded a small
+// steady cost for repeated freezes — a bad deal for anyone who scrolls around.
+//
+// So: load it exactly ONCE, the first time it nears the viewport (keeps the
+// heavy parse off the initial page load) — and from then on FREEZE it instead
+// of unloading. The iframe is same-origin, so we wrap its window's
+// requestAnimationFrame: while frozen, callbacks queue instead of scheduling
+// (the demo's rAF-driven loop stops dead, and with it the React renders it
+// feeds); on re-entry the queued callbacks flush through the real rAF and the
+// loop resumes exactly where it left off. No reload, no re-parse, no freeze.
+function setupFlowDemo() {
+  const iframe = document.querySelector('.focus-flow-frame');
+  const src = iframe?.dataset.src;
+  if (!iframe || !src) return;
+
+  let frozen = false, queue = [], resume = null;
+  iframe.addEventListener('load', () => {
+    const w = iframe.contentWindow;
+    if (!w || w.__ffPatched) return;
+    w.__ffPatched = true;
+    const real = w.requestAnimationFrame.bind(w);
+    w.requestAnimationFrame = (cb) => {
+      if (frozen) { queue.push(cb); return -1; }
+      return real(cb);
+    };
+    resume = () => {
+      const q = queue; queue = [];
+      q.forEach((cb) => real(cb));
+    };
+  });
+
+  let loaded = false;
+  const io = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      if (!loaded) { loaded = true; iframe.src = src; }
+      else if (frozen) { frozen = false; if (resume) resume(); }
+      frozen = false;
+    } else if (loaded) {
+      frozen = true;
+    }
+    // 150px margin (was 400): the trace showed the loop staying awake through
+    // the whole neighbouring Habits/Journey zone — the demo is tall, so a wide
+    // margin kept it "near" for most of the lower page. Resume is instant
+    // (queued rAF flush), so a tight margin costs nothing visually.
+  }, { rootMargin: '150px 0px' });
+  io.observe(iframe);
+}
+
+// ─── shimmer gating — pause the af-shimmer lime sheen off-screen ──
+// The overview and journey headlines carry a clipped-gradient "lime" word that
+// loops forever via CSS animation (af-shimmer). A gradient clipped to text
+// can't be composited — every tick repaints those glyphs — so an infinite
+// loop with no gate keeps costing frames even scrolled far away. Same fix as
+// the turn-bob idle phone: toggle a class while the section is anywhere near
+// the viewport and let CSS pause the animation outside that window.
+function setupShimmerGating() {
+  if (reduced) return;
+  ['overview', 'journey'].forEach((id) => {
+    const section = document.getElementById(id);
+    if (!section) return;
+    ScrollTrigger.create({
+      trigger: section, start: 'top bottom', end: 'bottom top',
+      toggleClass: { targets: section, className: 'is-in-view' },
+    });
+  });
 }
 
 // ─── hero atmosphere — dissolve grid + glow as the hero scrolls away ──
@@ -146,6 +240,14 @@ function setupMeetFocusSheet() {
   ScrollTrigger.create({
     trigger: turn, start: 'top 66px', end: 'center center',
     toggleClass: { targets: '#nav', className: 'nav--paper' },
+  });
+
+  // Gate the phone image's continuous idle bob (CSS animation, see turn-bob) to
+  // only run while the section is anywhere near the viewport — an infinite
+  // animation has no reason to keep the compositor ticking while scrolled away.
+  ScrollTrigger.create({
+    trigger: turn, start: 'top bottom', end: 'bottom top',
+    toggleClass: { targets: turn, className: 'is-in-view' },
   });
 
   if (reduced) return; // CSS default --dock:1 renders the docked state
@@ -277,6 +379,17 @@ function setupPaperDim() {
   const turn = document.getElementById('turn');
   if (!turn || reduced) return;
   const veil = turn.querySelector('.turn__veil');
+  // --paper-ink/--paper-accent inherit down to their consumers (kicker, ring,
+  // headline, body copy) — a real trace showed each write forcing a 20ms+
+  // style recalc, because the vars were set on #turn and inheritance made the
+  // browser reconsider EVERY descendant, including .turn__baseline (a sibling
+  // subtree that never reads them). @property + inherits:false was tried and
+  // rejected: it breaks the very cascade this code depends on (verified live —
+  // descendants freeze at the initial value instead of tracking the scrub).
+  // Writing to .turn__inner instead keeps the cascade working but excludes
+  // .turn__baseline from the inheritance check — smaller blast radius, same
+  // visual result.
+  const inkTarget = turn.querySelector('.turn__inner') || turn;
 
   const locked = matchMedia('(min-width: 861px) and (hover: hover)').matches;
   // locked: scrub across the pin runway (top top → bottom bottom of the tall
@@ -287,10 +400,15 @@ function setupPaperDim() {
 
   const tl = gsap.timeline({ scrollTrigger: trigger });
   tl.to({}, { duration: locked ? 0.12 : 0.04 });   // settle — fully visible first
-  tl.to(turn, {
+  tl.to(inkTarget, {
     '--paper-ink': '235, 238, 242',
     '--paper-accent': '#BFFF47',
-    ease: 'none', duration: locked ? 0.76 : 0.92,
+    // stepped, not continuous: every write invalidates style for the subtree
+    // reading it and forces a glyph repaint. A smooth tween does that on every
+    // scrubbed frame; 14 discrete steps is imperceptible for a colour ramp but
+    // cuts the repaint count by an order of magnitude. The veil's opacity fade
+    // (below) stays perfectly smooth — opacity is compositor-only, no such cost.
+    ease: 'steps(14)', duration: locked ? 0.76 : 0.92,
   });
   if (veil) tl.to(veil, { opacity: 1, ease: 'none', duration: locked ? 0.76 : 0.92 }, '<');
   if (locked) tl.to({}, { duration: 0.12 });        // hold full-dark before release
@@ -336,14 +454,19 @@ function setupProblemReveal() {
   const allWords = [];
   els.forEach((el) => splitWords(el).forEach((w) => {
     const lime = w.querySelector('.lime');
-    allWords.push({ el: lime || w, rgb: lime ? '191,255,71' : '230,235,241', last: -1 });
+    const target = lime || w;
+    // Colour is set ONCE, fixed — the fill below drives opacity, not colour
+    // alpha. Same fade against a flat background, but opacity is
+    // compositor-only (no glyph repaint per word per scrubbed frame).
+    target.style.color = `rgb(${lime ? '191,255,71' : '230,235,241'})`;
+    allWords.push({ el: target, last: -1 });
   }));
 
   const paint = (w, alpha) => {
     const q = Math.round(alpha * 100);
     if (q === w.last) return;
     w.last = q;
-    w.el.style.color = `rgba(${w.rgb},${q / 100})`;
+    w.el.style.opacity = q / 100;
   };
 
   // Each word lights up in sequence, tied to scroll progress (0–1).
@@ -362,10 +485,17 @@ function setupProblemReveal() {
   // Start everything dim.
   allWords.forEach((w) => paint(w, 0.18));
 
+  // --hold is consumed ONLY by the ring inside .problem__kicker, but it used
+  // to be written to the SECTION root — which invalidated style for the whole
+  // #problem subtree (including the entire notification noise field, ~100+
+  // elements) on every step of the pinned hold. Writing it on the kicker
+  // scopes each invalidation to a handful of elements.
+  const kicker = section.querySelector('.problem__kicker') || section;
+
   // Skip animation for reduced motion — full colour, hold ring complete.
   if (reduced) {
     allWords.forEach((w) => paint(w, 1));
-    section.style.setProperty('--hold', 1);
+    kicker.style.setProperty('--hold', 1);
     return;
   }
 
@@ -384,7 +514,7 @@ function setupProblemReveal() {
     const v = p.toFixed(2);
     if (v === lastHold) return;
     lastHold = v;
-    section.style.setProperty('--hold', v);
+    kicker.style.setProperty('--hold', v);
   };
   if (!canHold) {
     ScrollTrigger.create({
@@ -473,11 +603,18 @@ function setupScrollHeadlines() {
     // actually mid-transition invalidate style/paint. Six of these headlines
     // can be live near section boundaries at once; this is what keeps their
     // combined cost negligible.
+    // Paint target's colour is set ONCE (not tweened) and the fill drives
+    // opacity instead of colour alpha — visually identical for solid text
+    // against a flat background, but opacity is compositor-only (no glyph
+    // repaint), where colour forces a style recalc + repaint every word every
+    // scrubbed frame. Same discipline as the lime words already used.
     const words = splitWords(el).map((w) => {
       const lime = w.querySelector('.lime');
-      return { el: lime || w, isLime: !!lime, last: -1 };
+      const target = lime || w;
+      if (!lime) target.style.color = `rgb(${ink})`;
+      return { el: target, isLime: !!lime, last: -1 };
     });
-    if (reduced) { words.forEach((w) => { if (w.isLime) w.el.style.opacity = '1'; else w.el.style.color = `rgba(${ink},1)`; }); return; }
+    if (reduced) { words.forEach((w) => { w.el.style.opacity = '1'; }); return; }
 
     // Optional: drive this element's fill off another element's scroll position
     // (data-sr-trigger) so two headlines reveal in sync — e.g. the cost-section
@@ -498,14 +635,10 @@ function setupScrollHeadlines() {
           const q = Math.round((0.15 + eased * 0.85) * 100);
           if (q === w.last) return;
           w.last = q;
-          if (w.isLime) {
-            // Drive opacity (not colour) so a clipped-gradient sheen — e.g. the
-            // journey headline's lime words — survives the reveal; for solid lime
-            // words this looks identical to fading the colour alpha.
-            w.el.style.opacity = q / 100;
-          } else {
-            w.el.style.color = `rgba(${ink},${q / 100})`;
-          }
+          // Opacity for both cases — a clipped-gradient sheen (lime) or a
+          // fixed-colour word (ink, set once above) fade identically via alpha,
+          // but opacity is compositor-only where colour forces a repaint.
+          w.el.style.opacity = q / 100;
         });
       },
     });
@@ -555,9 +688,18 @@ function rollNum(el, to, dur = 0.5, delay = 0) {
   if (!el) return;
   if (reduced) { el.textContent = to; return; }
   const o = el._roll || (el._roll = { v: parseFloat(el.textContent) || 0 });
+  // Only the ROUNDED value is ever displayed — many consecutive tween ticks
+  // (near the ease-out tail especially) land on the same integer. Skip the
+  // textContent write (a layout-invalidating op) when it hasn't changed.
+  let last = Math.round(o.v);
   gsap.to(o, {
     v: to, duration: dur, delay, ease: 'power2.out', overwrite: true,
-    onUpdate: () => { el.textContent = Math.round(o.v); },
+    onUpdate: () => {
+      const r = Math.round(o.v);
+      if (r === last) return;
+      last = r;
+      el.textContent = r;
+    },
   });
 }
 
@@ -751,13 +893,21 @@ function setupModesMosaic() {
 
   // Precompute per-card constants ONCE (isTop direction + reveal offset) instead
   // of an O(n) topCards.includes() per card per frame, and cache the last value
-  // written so settled cards are skipped — the scrub only writes the handful of
-  // cards mid-transition each frame, not all ~30.
+  // written so settled cards are skipped.
+  //
+  // Stagger geometry matters for scroll cost: with offsets spread over 0.6 and
+  // each card fading across a 0.4-wide window, ~2/3 of all 62 tiles were
+  // mid-transition at once — ~40 style writes per scrubbed frame, which a trace
+  // showed as this zone's recalc storm (1.08ms avg / 5ms p95 per flush).
+  // Spreading offsets over 0.78 with a 0.22-wide window keeps the exact same
+  // left-to-right sweep across the same scroll distance, but only ~17 tiles
+  // move concurrently — each card's own fade is a touch quicker, the wave is
+  // unchanged, and per-frame writes drop by more than half.
   const topSet = new Set(topCards);
   const meta = allCards.map((card, i) => ({
     card,
     dir: topSet.has(card) ? -14 : 14,
-    offset: (i / allCards.length) * 0.6,
+    offset: (i / allCards.length) * 0.78,
     last: -1,
   }));
 
@@ -770,7 +920,7 @@ function setupModesMosaic() {
       if (_hoverCat) return; // let hover animation own opacity
       const p = self.progress;
       for (const m of meta) {
-        const t = Math.max(0, Math.min(1, (p - m.offset) / 0.4));
+        const t = Math.max(0, Math.min(1, (p - m.offset) / 0.22));
         const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         if (Math.abs(eased - m.last) < 0.004) continue; // settled — skip the write
         m.last = eased;
@@ -891,14 +1041,20 @@ function setupHeroDevices() {
     const introY = intro * intro * 70;
     const e = exitProgress;
     const fade = smooth01(e / 0.85); // fully gone by ~85% of the hero scroll
+    const op = (1 - fade).toFixed(3);
     for (const p of phones) {
       const f = Math.sin(t * p.spd + p.ph) * p.amp;
       const exitY = -e * EXIT_DIST * p.depth;
       const x = e * p.driftX;
       const rot = p.base + e * p.peel;
-      p.el.style.transform =
-        `translate(-50%,-50%) translate(${x.toFixed(1)}px, ${(f + introY + exitY).toFixed(1)}px) rotate(${rot.toFixed(2)}deg)`;
-      p.el.style.opacity = (1 - fade).toFixed(3);
+      // The idle bob drifts ~0.1px/frame — at 0.5px quantisation most frames
+      // write nothing at all (imperceptible on a slow float), instead of two
+      // style invalidations per phone per frame competing with the scroll.
+      const y = Math.round((f + introY + exitY) * 2) / 2;
+      const tf =
+        `translate(-50%,-50%) translate(${x.toFixed(1)}px, ${y}px) rotate(${rot.toFixed(2)}deg)`;
+      if (tf !== p.lastTf) { p.lastTf = tf; p.el.style.transform = tf; }
+      if (op !== p.lastOp) { p.lastOp = op; p.el.style.opacity = op; }
     }
     if (running) rafId = requestAnimationFrame(frame);
   }
@@ -957,7 +1113,19 @@ function setupNavLinks() {
 function navAndProgress() {
   const nav = document.getElementById('nav');
   const fill = document.querySelector('[data-prog]');
-  let lastY = 0;
+  let lastY = 0, lastSX = -1;
+
+  // scrollHeight forces a synchronous layout if anything on the page is
+  // layout-dirty — reading it on every scroll frame turns any other layout
+  // write that same tick into a forced reflow. Measure once, and only
+  // re-measure on resize / ScrollTrigger refresh (page height actually changed).
+  let maxScroll = 0;
+  const measure = () => { maxScroll = document.documentElement.scrollHeight - window.innerHeight; };
+  measure();
+  let mrt;
+  window.addEventListener('resize', () => { clearTimeout(mrt); mrt = setTimeout(measure, 150); });
+  ScrollTrigger.addEventListener('refresh', measure);
+
   ScrollTrigger.create({
     start: 1, end: 99999,
     onUpdate(self) {
@@ -972,8 +1140,10 @@ function navAndProgress() {
       }
       lastY = y;
       if (fill) {
-        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-        gsap.set(fill, { scaleX: maxScroll > 0 ? y / maxScroll : 0 });
+        // quantised to ~0.1% steps and deduped — sub-pixel on a hairline, so
+        // identical frames skip the transform write entirely
+        const sx = maxScroll > 0 ? Math.round((y / maxScroll) * 1000) / 1000 : 0;
+        if (sx !== lastSX) { lastSX = sx; gsap.set(fill, { scaleX: sx }); }
       }
     },
   });

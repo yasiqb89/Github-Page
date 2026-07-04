@@ -29,6 +29,18 @@
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin/>
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&f[]=clash-display@600&f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
+  <!-- True no-JS fallback: the preloader and every scroll-reveal system depend
+       on js/main.js (which itself depends on the gsap/lenis ES modules loading
+       from esm.sh) to ever remove their hidden state. Without this, a no-JS
+       visitor sees a permanent black screen. -->
+  <noscript>
+    <style>
+      #preloader { display: none !important; }
+      .reveal, .r-up, .reveal-children > *, .r-clip {
+        opacity: 1 !important; transform: none !important; clip-path: none !important;
+      }
+    </style>
+  </noscript>
 
   <script type="importmap">
   {
@@ -86,8 +98,10 @@
      HERO  (midnight)
 ════════════════════════════════════════ -->
 <section class="s s--blk hero" id="hero" tabindex="-1" style="--from:#141414;--to:#141414">
-  <canvas class="hero__aura" id="hero-aura" aria-hidden="true"></canvas>
-  <canvas class="hero__grid" id="hero-grid" aria-hidden="true"></canvas>
+  <div class="hero__atmo" aria-hidden="true">
+    <canvas class="hero__aura" id="hero-aura" aria-hidden="true"></canvas>
+    <canvas class="hero__grid" id="hero-grid" aria-hidden="true"></canvas>
+  </div>
   <div class="hero__layout page-grid">
     <div class="hero__inner">
       <p class="hero__eyebrow reveal"><span class="dot"></span>Focus · iOS 17+</p>
@@ -763,19 +777,19 @@
 
   </div>
 
-  <div class="af__grain" aria-hidden="true"></div>
   <div class="af__stage">
 
     <!-- copy: frozen kicker + single morphing headline -->
     <div class="af__copy">
       <p class="kicker r-up af__kicker">Inside Focus</p>
       <h2 class="af__title">Everything you need to take your <span class="lime">attention</span> back.</h2>
+      <p class="af__desc" aria-hidden="true"></p>
     </div>
 
     <!-- feature grid + morphing caption beneath it -->
     <div class="af__tools">
     <div class="af__row" role="tablist" aria-label="Features">
-      <button class="af__icon" role="tab" aria-selected="false" data-i="0" style="--ac:#5AC8FA" aria-label="Blocking">
+      <button class="af__icon" role="tab" aria-selected="false" data-i="0" style="--ac:#FF9F0A" aria-label="Blocking">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>
       </button>
       <button class="af__icon" role="tab" aria-selected="false" data-i="1" style="--ac:#FFD60A" aria-label="Always-on protection">
@@ -796,7 +810,7 @@
       <button class="af__icon" role="tab" aria-selected="false" data-i="6" style="--ac:#34C3E0" aria-label="Smart insights">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15l4-4 3 2 5-6.5"/><path d="M4 20h16"/><circle cx="16" cy="6.5" r="1.6" fill="currentColor" stroke="none"/></svg>
       </button>
-      <button class="af__icon" role="tab" aria-selected="false" data-i="7" style="--ac:#FF9F0A" aria-label="Momentum">
+      <button class="af__icon" role="tab" aria-selected="false" data-i="7" style="--ac:#5AC8FA" aria-label="Momentum">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14l5-5 4 4 7-7"/><path d="M16 6h4v4"/></svg>
       </button>
       <button class="af__icon" role="tab" aria-selected="false" data-i="8" style="--ac:#8BE85F" aria-label="Weekly reports">
@@ -856,9 +870,8 @@
       <div class="block__window">
         <div class="safari-crop">
           <iframe class="safari-svg focus-flow-frame"
-                  src="focus-flow.html"
+                  data-src="focus-flow.html"
                   scrolling="no"
-                  loading="lazy"
                   title="Focus blocking a session — Deep Work mode">
           </iframe>
           <!-- one-shot keyline flash — pre-rendered lime glow, only opacity animates -->
@@ -1059,6 +1072,23 @@
   </div>
 </footer>
 
+<!-- Safety net — plain script, no ES-module dependency, so it runs even if the
+     gsap/lenis imports in js/main.js never resolve (esm.sh unreachable, a
+     network error, a thrown init error). Without this, a failed module graph
+     leaves the opaque preloader up forever with the whole page hidden behind
+     it. If nothing has dismissed the preloader within 6s, force the resting
+     (fully visible, non-animated) state everywhere the reveal systems would
+     otherwise have left content invisible. -->
+<script>
+  setTimeout(function () {
+    var pre = document.getElementById('preloader');
+    if (pre && !pre.classList.contains('is-done')) {
+      pre.classList.add('is-done');
+      var revealed = document.querySelectorAll('.reveal, .r-up, .reveal-children, .r-clip');
+      for (var i = 0; i < revealed.length; i++) revealed[i].classList.add('is-in');
+    }
+  }, 6000);
+</script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

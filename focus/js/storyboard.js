@@ -1,4 +1,6 @@
 // ── Feature showcase — hover-driven ambient field ────────────
+import { createFieldGL } from './afGL.js';
+
 const N_BASE = 1600;   // desktop particle budget; scaled down per-device at init
 const S = 300;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -28,14 +30,14 @@ const LUM = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
 const LIME_LUM = LUM(DEFAULT.col[0], DEFAULT.col[1], DEFAULT.col[2]);
 
 const FEATURES = [
-  { draw: drawBan,      col: [90, 200, 250],  title: '<span class="lime">Blocking</span>',                 line: 'A wall around the apps and sites that hijack your focus.' },
+  { draw: drawBan,      col: [255, 159, 10],  title: '<span class="lime">Blocking</span>',                 line: 'A wall around the apps and sites that hijack your focus.' },
   { draw: drawShield,   col: [255, 214, 10],  title: '<span class="lime">Always-on</span>',                line: 'It holds the line even when willpower clocks out for the day.' },
   { draw: drawCalendar, col: [191, 255, 71],  title: '<span class="lime">Scheduled blocks</span>',         line: 'Recurring blocks that begin on their own, every single day.' },
   { draw: drawLock,     col: [94, 157, 255],  title: '<span class="lime">App limits</span>',               line: 'Hard daily caps on the apps that quietly take the most.' },
   { draw: drawTarget,   col: [48, 209, 88],   title: '<span class="lime">Focus sessions</span>',           line: 'Custom rules for each session — your focus, on your terms.' },
   { draw: drawBubble,   col: [167, 139, 250], title: '<span class="lime">CBT resistance</span>',           line: 'Research-backed prompts that defuse the impulse in the moment.' },
   { draw: drawInsight,  col: [52, 195, 224],  title: '<span class="lime">Smart insights</span>',           line: 'See when you focus best, and exactly what breaks it.' },
-  { draw: drawArrowUp,  col: [255, 159, 10],  title: '<span class="lime">Momentum</span>',                 line: 'Every kept session pushes you a little further forward.' },
+  { draw: drawArrowUp,  col: [90, 200, 250],  title: '<span class="lime">Momentum</span>',                 line: 'Every kept session pushes you a little further forward.' },
   { draw: drawBars,     col: [139, 232, 95],  title: '<span class="lime">Weekly reports</span>',           line: 'Seven days of focus in one clear picture, every Sunday.' },
   { draw: drawFlame,    col: [255, 96, 38],   title: '<span class="lime">Streaks &amp; shields</span>',    line: 'Streaks, shields and stats that stack up over time.' },
   { draw: drawFlag,     col: [129, 140, 248], title: '<span class="lime">Identity journey</span>',         line: 'Grow through stages as your focus compounds week over week.' },
@@ -50,7 +52,12 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   const stage    = section.querySelector('.af__stage');
   const canvas   = section.querySelector('.af__canvas');
   if (!stage || !canvas) return;
-  const ctx      = canvas.getContext('2d');
+  // Try WebGL first — one GPU draw call/frame instead of up to N_BASE
+  // individual drawImage() calls. A canvas element's context type is fixed on
+  // first successful getContext(), so 2D can only be requested here if GL
+  // creation failed (old browser, GPU disabled, context limit hit, etc).
+  const glR = createFieldGL(canvas, N_BASE);
+  const ctx = glR.supported ? null : canvas.getContext('2d');
   const reduced  = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const icons    = [...section.querySelectorAll('.af__icon')];
@@ -78,9 +85,15 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
       if (r.idx !== idx) return;
       gsap.killTweensOf(r.o);
       r.o.v = 0;
+      let last = -1; // force the first frame to write, then skip unchanged rounds
       gsap.to(r.o, {
         v: r.val, duration: 0.8, delay: 0.2, ease: 'power2.out',
-        onUpdate: () => { r.tn.textContent = r.pre + Math.round(r.o.v) + r.post; },
+        onUpdate: () => {
+          const round = Math.round(r.o.v);
+          if (round === last) return;
+          last = round;
+          r.tn.textContent = r.pre + round + r.post;
+        },
       });
     });
   }
@@ -96,6 +109,7 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     if (any) rollExhibits(idx);
   }
   const titleEl  = section.querySelector('.af__title');
+  const descEl   = section.querySelector('.af__desc');
   const lineEl   = section.querySelector('.af__line');
   const row      = section.querySelector('.af__row');
   // kicker reveal is owned by the global .r-up system (setupReveals), like every
@@ -171,7 +185,7 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
 
   // ── sizing ──
   const dpr = Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5);
-  let w = 0, h = 0, bx = 0, by = 0, scale = 1;
+  let w = 0, h = 0, bx = 0, by = 0, scale = 1, curRdpr = dpr;
   let secRect = null, rowRect = null, rectDirty = false;   // cached rects for parallax (no per-move reflow)
   let lastScrollAt = -1e9;                                  // last Lenis scroll time — gates per-frame gradient rebuilds
   const chipC = icons.map(() => ({ x: 0, y: 0 }));   // chip centres, row-local
@@ -194,9 +208,11 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     const MAXPIX = 3.0e6;
     let rdpr = dpr;
     if (w * h * dpr * dpr > MAXPIX) rdpr = Math.sqrt(MAXPIX / (w * h));
+    curRdpr = rdpr;
     canvas.width = Math.round(w * rdpr); canvas.height = Math.round(h * rdpr);
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-    ctx.setTransform(rdpr, 0, 0, rdpr, 0, 0);
+    if (glR.supported) glR.resize(canvas.width, canvas.height);
+    else ctx.setTransform(rdpr, 0, 0, rdpr, 0, 0);
     bx = w / 2;
     by = h * 0.50; // sits in the gap between the (raised) copy and the icons
     scale = clamp(Math.min(w, h) / 640, 0.55, 1.7);
@@ -267,26 +283,44 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   const curC = DEFAULT.col.slice();
   const tgtC = DEFAULT.col.slice();
   let morphing = false;
-  function morphCopy(newTitle, newLine, dir) {
-    if (reduced) { titleEl.innerHTML = newTitle; lineEl.textContent = newLine; return; }
-    if (morphing) { gsap.killTweensOf([titleEl, lineEl]); morphing = false; }
+  // newDesc is the tool's one-liner, shown as a subhead directly under the
+  // title (descEl) — '' for the rest state, which has no subhead of its own
+  // (the ambient hint lives permanently in .af__line, handled by setHintDim).
+  function morphCopy(newTitle, newDesc, dir) {
+    const targets = descEl ? [titleEl, descEl] : [titleEl];
+    if (reduced) {
+      titleEl.innerHTML = newTitle;
+      if (descEl) descEl.textContent = newDesc || '';
+      return;
+    }
+    if (morphing) { gsap.killTweensOf(targets); morphing = false; }
     morphing = true;
     // Opacity + transform only — both GPU-composited, so no per-frame
     // rasterisation. Animating filter:blur() here re-rasterised the big headline
     // every frame and was the section's main hover hitch.
-    gsap.to([titleEl, lineEl], {
+    gsap.to(targets, {
       autoAlpha: 0, y: dir * -12,
       duration: 0.2, ease: 'power2.in', stagger: 0.03,
       onComplete() {
         titleEl.innerHTML = newTitle;
-        lineEl.textContent = newLine;
-        gsap.fromTo([titleEl, lineEl],
+        if (descEl) descEl.textContent = newDesc || '';
+        gsap.fromTo(targets,
           { autoAlpha: 0, y: dir * 16 },
           { autoAlpha: 1, y: 0,
             duration: 0.46, ease: 'power3.out', stagger: 0.05,
             onComplete() { morphing = false; } });
       },
     });
+  }
+
+  // The ambient hover hint (.af__line, "Hover any tool…") never changes text
+  // anymore — it just recedes while a tool's own description is showing above,
+  // so the row still reads as instructional rather than looking incomplete.
+  function setHintDim(active) {
+    if (!lineEl) return;
+    const to = active ? 0.32 : 1;
+    if (reduced) { lineEl.style.opacity = to; return; }
+    gsap.to(lineEl, { opacity: to, duration: 0.4, ease: 'power2.out', overwrite: true });
   }
 
   // ── active / default ──
@@ -300,8 +334,11 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     const f = FEATURES[idx];
     tgtC[0] = f.col[0]; tgtC[1] = f.col[1]; tgtC[2] = f.col[2];
     // one colour voice: the headline's accent word follows the feature colour
-    // via --fx (see .af.is-exhibiting .af__title .lime)
-    section.style.setProperty('--fx', `rgb(${f.col[0]},${f.col[1]},${f.col[2]})`);
+    // via --fx (see .af.is-exhibiting .af__title .lime). Set on the TITLE, not
+    // the section root — a custom property inherits, so writing it on #overview
+    // forced a style recalc across the whole section subtree (canvas, 15 icons,
+    // every exhibit) on each hover; the title is the only element that reads it.
+    titleEl.style.setProperty('--fx', `rgb(${f.col[0]},${f.col[1]},${f.col[2]})`);
     morph.set(T[idx]);
     icons.forEach((el, k) => {
       el.classList.toggle('is-active', k === idx);
@@ -310,6 +347,7 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     });
     showExhibits(idx);
     morphCopy(f.title, f.line, 1);
+    setHintDim(true);
     if (reduced) applyChipTransforms(true);
   }
   function setDefault() {
@@ -323,7 +361,8 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
       el.tabIndex = k === 0 ? 0 : -1;
     });
     showExhibits(-1);
-    morphCopy(DEFAULT.title, DEFAULT.line, -1);
+    morphCopy(DEFAULT.title, '', -1);
+    setHintDim(false);
     if (reduced) applyChipTransforms(true);
   }
   // press physics — the pressed chip dips through the dock's spring system
@@ -407,6 +446,16 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   // particles actually drawn this frame — the FPS guard trims this on slow devices
   let drawN = N;
 
+  // Ambient wash bloom (0 at rest → 1 while a feature is engaged). The idle ring
+  // is always drawn — it's a small contained mark — but the big radial glow pool
+  // is what made the section read as a separate glowing block; gating it to hover
+  // keeps the rest state flat, continuous with the neighbouring sections, and
+  // turns the glow into an intentional reveal. Eased per-frame so it blooms in /
+  // out smoothly instead of popping.
+  let washEngage = 0;
+
+  const useGL = glR.supported;
+
   function draw() {
     for (let k = 0; k < 3; k++) curC[k] += (tgtC[k] - curC[k]) * 0.06;
     // spring parallax — slight trailing momentum
@@ -415,25 +464,48 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     const cr = curC[0] | 0, cg = curC[1] | 0, cb = curC[2] | 0;
     const cx = bx + px * 26, cy = by + py * 18;
 
-    ctx.clearRect(0, 0, w, h);
     // Glow radius — kept tight so the bloom stays a contained pool behind the
     // content rather than washing across the whole section.
     const R = Math.min(w, h) * 0.42;
-    // Rebuilding the wash (a 512² multi-stop radial fill) and the sprite is only
-    // needed when the glow COLOUR changes — which only happens while curC eases
-    // toward a hovered feature's colour. Two guards keep that off the scroll path:
-    //  • quantise the colour to steps of 8 so a transition rebuilds a handful of
-    //    times instead of every frame — invisible on a soft, low-alpha bloom;
-    //  • never rebuild while actively scrolling — the last frame's wash is reused,
-    //    so a hover-then-scroll can't land a 260k-pixel gradient fill mid-scroll
-    //    (the exact cause of the post-hover scroll jitter). The hue catches up the
-    //    instant scroll settles.
-    const qc = [cr & ~7, cg & ~7, cb & ~7];
-    // Skip the rebuild while actively scrolling — but NEVER skip the first build
-    // (washKey === -1), or the field renders blank while you scroll into the
-    // section and the ring only pops in once scrolling stops.
-    if (washKey === -1 || performance.now() - lastScrollAt >= 90) { buildWash(qc); buildSprite(qc); }
-    ctx.drawImage(washCv, cx - R, cy - R, R * 2, R * 2);
+
+    // Ease the wash toward its target: full while a feature is engaged, gone at rest.
+    washEngage += ((active === -1 ? 0 : 1) - washEngage) * 0.08;
+    const washOn = washEngage > 0.004;
+
+    if (useGL) {
+      // The GL fragment shader computes the radial falloff analytically per
+      // pixel every frame, so there's no texture-bake cost to guard against —
+      // unlike the Canvas2D path below, the wash just redraws at the current
+      // colour with no caching/quantising needed.
+      glR.clear();
+      if (washOn) {
+        const washK = Math.min(1.7, LIME_LUM / Math.max(1, LUM(cr, cg, cb)));
+        glR.drawWash(cx, cy, R, [cr, cg, cb], 0.11 * washK * washEngage, curRdpr);
+      }
+    } else {
+      ctx.clearRect(0, 0, w, h);
+      // Rebuilding the wash (a 512² multi-stop radial fill) and the sprite is only
+      // needed when the glow COLOUR changes — which only happens while curC eases
+      // toward a hovered feature's colour. Two guards keep that off the scroll path:
+      //  • quantise the colour to steps of 8 so a transition rebuilds a handful of
+      //    times instead of every frame — invisible on a soft, low-alpha bloom;
+      //  • never rebuild while actively scrolling — the last frame's wash is reused,
+      //    so a hover-then-scroll can't land a 260k-pixel gradient fill mid-scroll
+      //    (the exact cause of the post-hover scroll jitter). The hue catches up the
+      //    instant scroll settles.
+      const qc = [cr & ~7, cg & ~7, cb & ~7];
+      // The sprite is needed every frame (the idle ring draws at rest too); the
+      // wash only while engaged. Skip rebuilds mid-scroll, but never skip a first
+      // build, or the field renders blank on scroll-in.
+      const canBuild = spriteKey === -1 || performance.now() - lastScrollAt >= 90;
+      if (canBuild) buildSprite(qc);
+      if (washOn) {
+        if (canBuild || washKey === -1) buildWash(qc);
+        ctx.globalAlpha = washEngage;
+        ctx.drawImage(washCv, cx - R, cy - R, R * 2, R * 2);
+        ctx.globalAlpha = 1;
+      }
+    }
 
     // At rest the brand arc rotates almost imperceptibly (~1 rev / 90s): the
     // morph targets themselves turn, and the particles chase them — so the
@@ -452,8 +524,10 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     // Direct morph with character: each particle eases toward the glyph at its
     // own rate (pK — shapes sweep into place rather than arriving as one mass),
     // and ~18% take a curved detour (pSw — perpendicular drift proportional to
-    // the remaining delta, self-extinguishing on landing).
-    ctx.globalCompositeOperation = 'lighter';   // additive — overlaps bloom into glow
+    // the remaining delta, self-extinguishing on landing). This physics loop is
+    // identical whether GL or Canvas2D ends up drawing the result — only the
+    // final "put a dot at (sx,sy)" step differs.
+    if (!useGL) ctx.globalCompositeOperation = 'lighter';   // additive — overlaps bloom into glow
     const tm = performance.now() * 0.001, baseDot = 3.2 * scale;
     const LENS_R2 = 95 * 95, lensOn = finePointer && lpx > -1e4;
     for (let i = 0; i < drawN; i++) {
@@ -481,11 +555,19 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
         }
       }
       const dot = baseDot * pSize[i];
-      ctx.globalAlpha = pAlpha[i];
-      ctx.drawImage(sp, sx - dot / 2, sy - dot / 2, dot, dot);
+      if (useGL) {
+        glR.setParticle(i, sx, sy, dot, pAlpha[i]);
+      } else {
+        ctx.globalAlpha = pAlpha[i];
+        ctx.drawImage(sp, sx - dot / 2, sy - dot / 2, dot, dot);
+      }
     }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
+    if (useGL) {
+      glR.drawParticles(drawN, [cr, cg, cb], curRdpr);
+    } else {
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
   }
 
   // ── entrance choreography (runs once on first scroll-in) ──
@@ -570,8 +652,11 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     return;
   }
   // pre-hide entrance elements so nothing flashes before the section scrolls in
-  // (title is owned by the scroll-scrubbed headline reveal, set up below)
+  // (title is owned by the scroll-scrubbed headline reveal, set up below).
+  // descEl starts empty + hidden and stays that way until the first hover —
+  // it's not part of the standard intro, only the hover subhead.
   gsap.set(lineEl,   { autoAlpha: 0 });
+  if (descEl) gsap.set(descEl, { autoAlpha: 0 });
   gsap.set(icons,    { autoAlpha: 0 });
   gsap.set(svgs,     { y: 16 });
   setupHeadlineReveal();
@@ -585,21 +670,23 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   // the row (CSS), so no accidental hover; it's lifted ~150ms after scroll settles,
   // and a deliberate mouse move onto an icon then activates it as normal.
   let scrollSettle = null;
-  if (lenis && lenis.on) lenis.on('scroll', () => {
+  const onScrollActivity = () => {
     lastScrollAt = performance.now();
     if (!finePointer) return;             // touch: no hover to suppress, keep taps live
     section.classList.add('af--scrolling');
     clearTimeout(scrollSettle);
     scrollSettle = setTimeout(() => section.classList.remove('af--scrolling'), 150);
-  });
+  };
+  // Lenis when present; plain scroll events when running native (?native=1 /
+  // no smooth scroll) so the mid-scroll suppression works in both modes.
+  if (lenis && lenis.on) lenis.on('scroll', onScrollActivity);
+  else addEventListener('scroll', onScrollActivity, { passive: true });
 
   let running = false, raf = 0, fired = false, tick = 0, lastT = 0, emaDt = 16.7;
   function loop() {
     if (!running) { raf = 0; return; }
     raf = requestAnimationFrame(loop);
     tick++;
-    // refresh the cached parallax rect at most once per frame, only after a scroll
-    if (rectDirty) { secRect = section.getBoundingClientRect(); if (row) rowRect = row.getBoundingClientRect(); rectDirty = false; }
     // frame-time guard: track a smoothed dt and trim/grow the drawn particle
     // count so the field holds ~60fps on whatever device it lands on.
     const now = performance.now();
@@ -611,6 +698,13 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
       else if (emaDt < 18 && drawN < N)        drawN = Math.min(N, drawN + ((N * 0.05) | 0));
     }
     const scrolling = now - lastScrollAt < 90;
+    // Refresh the cached parallax rects at most once per frame — and NEVER
+    // mid-scroll: ScrollTrigger callbacks have just written styles this same
+    // frame, so a getBoundingClientRect here forces a synchronous layout on
+    // every scrolled frame the section is visible (a measured stutter source).
+    // The rects only feed pointer parallax; ~100ms of staleness while the page
+    // is in motion is invisible, and they refresh the moment scroll settles.
+    if (rectDirty && !scrolling) { secRect = section.getBoundingClientRect(); if (row) rowRect = row.getBoundingClientRect(); rectDirty = false; }
     if (scrolling && (tick & 1)) return;
     draw();
     // Dock magnification is frozen mid-scroll (the row ignores the pointer), so
