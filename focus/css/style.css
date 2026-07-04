@@ -2057,6 +2057,13 @@ img, svg, canvas { display: block; }
   align-items: center;
   padding-bottom: clamp(10px, 1.5vh, 20px);
   box-sizing: border-box;
+  cursor: grab;   /* click-and-drag panning (journey.js) — a plain mouse's only way to pan */
+  touch-action: pan-y;   /* let vertical touch scroll through; JS owns horizontal drag */
+}
+.journey__strip-wrap.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
 }
 /* Reduced-motion fallback: real horizontal scroll instead of the auto-glide */
 .journey__strip-wrap.is-native {

@@ -189,6 +189,17 @@ function buildCard(stage) {
 let _scrollTs = -1e9;
 const _scrolling = () => performance.now() - _scrollTs < 150;
 
+// The strip pans by translating its transform — the cursor itself never has
+// to move for cards to slide underneath it (wheel/trackpad swipe, a scrubber
+// drag, or the auto-entrance glide all just move content). The browser still
+// fires real mouseenter/mousemove on whatever card ends up under that fixed
+// screen point as it slides past — so every card the pan sweeps across was
+// firing its own hover/tilt rAF loop mid-pan, fighting the pan for the
+// compositor. applyP() (the single funnel every pan mechanism uses) stamps
+// this on every call; attachHover checks it and skips entirely while true.
+let _stripBusyTs = -1e9;
+const _stripBusy = () => performance.now() - _stripBusyTs < 150;
+
 function attachHover(card, tilt, face, glare, shimmer, reduced) {
   if (reduced || !matchMedia('(hover: hover)').matches) return;
   let rX = 0, rY = 0, tX = 0, tY = 0, raf = null, inside = false;
@@ -205,14 +216,18 @@ function attachHover(card, tilt, face, glare, shimmer, reduced) {
   }
 
   face.addEventListener('mouseenter', () => {
-    if (card.classList.contains('is-flipped')) return;
+    // A pan (wheel swipe, scrubber drag, the auto-glide) slides cards under a
+    // cursor that never moved — that's still a real mouseenter, but reacting
+    // to it means every card the pan sweeps past starts its own tilt loop
+    // fighting the pan. Skip entirely while the strip itself is in motion.
+    if (card.classList.contains('is-flipped') || _stripBusy()) return;
     inside = true;
     card.classList.add('is-hovered');
     glare.style.opacity   = '1';
     shimmer.style.opacity = '1';
   });
   face.addEventListener('mousemove', (e) => {
-    if (card.classList.contains('is-flipped')) return;
+    if (card.classList.contains('is-flipped') || _stripBusy()) return;
     // fresh rect only while the page is still; reuse the cache mid-scroll
     // (a stale tilt origin for ~150ms is invisible — a forced layout isn't)
     if (!_scrolling()) faceR = face.getBoundingClientRect();
@@ -238,8 +253,9 @@ function attachHover(card, tilt, face, glare, shimmer, reduced) {
   // Back face — tilt only, no hover effects
   const back = card.querySelector('.icard__back');
   if (back && !reduced) {
-    back.addEventListener('mouseenter', () => { inside = true; });
+    back.addEventListener('mouseenter', () => { if (!_stripBusy()) inside = true; });
     back.addEventListener('mousemove', (e) => {
+      if (_stripBusy()) return;
       if (!_scrolling()) backR = back.getBoundingClientRect();
       else if (!backR) return;
       const r  = backR;
@@ -347,15 +363,33 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
   // Returns a getter so callers can tell when the user is actively scrubbing —
   // used to stop the scroll-driven update from fighting the drag.
   const bindScrub = (seek) => {
-    let active = false;
-    const pAt = (x) => {
-      const r = track.getBoundingClientRect();
-      return r.width ? Math.max(0, Math.min(1, (x - r.left) / r.width)) : 0;
+    let active = false, trackRect = null;
+    // rAF-batched: raw pointermove can fire far more often than the page
+    // renders (especially a precise trackpad/mouse) — writing straight from
+    // each event meant multiple seek()/setScrub() passes (each doing a
+    // transform write + a text/attribute check) could land inside one frame.
+    // Buffering to "latest x, applied once per rendered frame" is the same
+    // discipline as every other pointer-driven loop in this file.
+    let pendingX = null, rafPending = false;
+    const pAt = (x) => trackRect && trackRect.width
+      ? Math.max(0, Math.min(1, (x - trackRect.left) / trackRect.width)) : 0;
+    const flush = () => {
+      rafPending = false;
+      if (pendingX === null) return;
+      const p = pAt(pendingX);
+      pendingX = null;
+      setScrub(p); seek(p);
     };
-    const move = (e) => { if (!active) return; const p = pAt(e.clientX); setScrub(p); seek(p); };
+    const move = (e) => {
+      if (!active) return;
+      pendingX = e.clientX;
+      if (!rafPending) { rafPending = true; requestAnimationFrame(flush); }
+    };
     track.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       active = true;
+      // measured once per drag, not per move — the track doesn't resize mid-drag
+      trackRect = track.getBoundingClientRect();
       track.classList.add('is-grabbing');
       try { track.setPointerCapture(e.pointerId); } catch (_) {}
       move(e);
@@ -364,6 +398,7 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
     const up = (e) => {
       if (!active) return;
       active = false;
+      trackRect = null;
       track.classList.remove('is-grabbing');
       try { track.releasePointerCapture(e.pointerId); } catch (_) {}
     };
@@ -444,9 +479,11 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
       movePending = false;
       // Mid-scroll, recomputeCenters would be 22 rect reads into a frame whose
       // styles ScrollTrigger just dirtied — a forced layout per pointer-move.
-      // Skip entirely; the first settled pointer-move re-runs with fresh rects
-      // (rectsDirty stays set until then).
-      if (_scrolling()) return;
+      // Same story while the strip itself is panning (drag/wheel/glide): every
+      // card just moved, so all 22 centers are stale anyway. Skip entirely;
+      // the first settled pointer-move re-runs with fresh rects (rectsDirty
+      // stays set until then).
+      if (_scrolling() || _stripBusy()) return;
       if (rectsDirty) recomputeCenters();
       let needTick = false;
       for (let i = 0; i < cardEls.length; i++) {
@@ -513,6 +550,7 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
       gsap.set(strip, { x: p * maxX });
       setScrub(p);
       rectsDirty = true;
+      _stripBusyTs = performance.now();   // shared gate — see attachHover/processGlow
     };
 
     // Entrance settles at this stage (index 5 → "06 / 22").
@@ -553,6 +591,55 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
       const unit = e.deltaMode === 1 ? 16 : 1;         // line-mode wheels → px-ish
       applyP(Math.min(1, Math.max(0, curP + (dx * unit) / Math.abs(maxX || 1))));
     }, { passive: false });
+
+    // ── Click-and-drag panning — plain-mouse support ──────────
+    // The wheel handler above only fires for a trackpad's horizontal swipe (or
+    // Shift+wheel); a plain mouse has no equivalent gesture, so it had no way
+    // to pan the strip at all except the small scrubber bar. This adds a
+    // direct grab-and-drag on the row itself, 1:1 with the cursor — the
+    // standard carousel interaction. rAF-batched (one strip write per
+    // rendered frame, not per raw pointermove) and a drag-distance threshold
+    // suppresses the card-flip click that a mouseup would otherwise fire.
+    let rowDragging = false, dragStartX = 0, dragStartP = 0, dragMoved = 0;
+    let pendingDragX = null, dragRafPending = false;
+    const flushDrag = () => {
+      dragRafPending = false;
+      if (pendingDragX === null) return;
+      const dx = pendingDragX - dragStartX;
+      pendingDragX = null;
+      enterTl.pause();
+      // Divide by maxX itself (always <= 0), NOT its absolute value — a grab-
+      // and-drag should track the cursor 1:1: drag left, the strip (and every
+      // card) moves left with your hand, same as dragging a map or a photo.
+      // Dividing by |maxX| flipped that (drag left moved cards right).
+      applyP(Math.min(1, Math.max(0, dragStartP + dx / (maxX || -1))));
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      rowDragging = true; dragMoved = 0;
+      dragStartX = e.clientX; dragStartP = curP;
+      wrap.classList.add('is-dragging');
+      try { wrap.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!rowDragging) return;
+      dragMoved = Math.max(dragMoved, Math.abs(e.clientX - dragStartX));
+      pendingDragX = e.clientX;
+      if (!dragRafPending) { dragRafPending = true; requestAnimationFrame(flushDrag); }
+    });
+    const endRowDrag = (e) => {
+      if (!rowDragging) return;
+      rowDragging = false;
+      wrap.classList.remove('is-dragging');
+      try { wrap.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    wrap.addEventListener('pointerup', endRowDrag);
+    wrap.addEventListener('pointercancel', endRowDrag);
+    // Capture phase: runs before the card's own click listener (attachHover),
+    // so a real drag (moved > 6px) can stop the flip-click before it fires.
+    wrap.addEventListener('click', (e) => {
+      if (dragMoved > 6) { e.stopPropagation(); e.preventDefault(); }
+    }, true);
 
     // ── Resize: recompute scale + travel + pin, then refresh ──
     let rt;
