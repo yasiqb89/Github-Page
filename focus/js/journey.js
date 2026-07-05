@@ -600,7 +600,9 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
     // standard carousel interaction. rAF-batched (one strip write per
     // rendered frame, not per raw pointermove) and a drag-distance threshold
     // suppresses the card-flip click that a mouseup would otherwise fire.
-    let rowDragging = false, dragStartX = 0, dragStartP = 0, dragMoved = 0;
+    const DRAG_THRESHOLD = 5;   // px before a press becomes a drag (vs a click)
+    let rowDragging = false, dragActive = false, dragPid = -1;
+    let dragStartX = 0, dragStartP = 0, dragMoved = 0;
     let pendingDragX = null, dragRafPending = false;
     const flushDrag = () => {
       dragRafPending = false;
@@ -616,29 +618,42 @@ export function initJourney(root, stages, gsap, ScrollTrigger, lenis) {
     };
     wrap.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
-      rowDragging = true; dragMoved = 0;
-      dragStartX = e.clientX; dragStartP = curP;
-      wrap.classList.add('is-dragging');
-      try { wrap.setPointerCapture(e.pointerId); } catch (_) {}
+      rowDragging = true; dragActive = false; dragMoved = 0;
+      dragStartX = e.clientX; dragStartP = curP; dragPid = e.pointerId;
+      // Deliberately NO setPointerCapture here: capturing on a plain press
+      // retargets the resulting click event to the wrap, which stole the flip
+      // click from the card underneath (that was the "flip stopped working"
+      // regression). Capture only once a real drag actually begins, below.
     });
     wrap.addEventListener('pointermove', (e) => {
       if (!rowDragging) return;
       dragMoved = Math.max(dragMoved, Math.abs(e.clientX - dragStartX));
+      // promote press → drag once past the threshold (and only then capture)
+      if (!dragActive && dragMoved > DRAG_THRESHOLD) {
+        dragActive = true;
+        wrap.classList.add('is-dragging');
+        try { wrap.setPointerCapture(dragPid); } catch (_) {}
+      }
+      if (!dragActive) return;   // still within click tolerance — let it be a click
       pendingDragX = e.clientX;
       if (!dragRafPending) { dragRafPending = true; requestAnimationFrame(flushDrag); }
     });
     const endRowDrag = (e) => {
       if (!rowDragging) return;
       rowDragging = false;
-      wrap.classList.remove('is-dragging');
-      try { wrap.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (dragActive) {
+        wrap.classList.remove('is-dragging');
+        try { wrap.releasePointerCapture(e.pointerId); } catch (_) {}
+        dragActive = false;
+      }
     };
     wrap.addEventListener('pointerup', endRowDrag);
     wrap.addEventListener('pointercancel', endRowDrag);
     // Capture phase: runs before the card's own click listener (attachHover),
-    // so a real drag (moved > 6px) can stop the flip-click before it fires.
+    // so a real drag (moved past the threshold) suppresses the flip-click; a
+    // plain click (moved <= threshold) passes straight through to flip the card.
     wrap.addEventListener('click', (e) => {
-      if (dragMoved > 6) { e.stopPropagation(); e.preventDefault(); }
+      if (dragMoved > DRAG_THRESHOLD) { e.stopPropagation(); e.preventDefault(); }
     }, true);
 
     // ── Resize: recompute scale + travel + pin, then refresh ──

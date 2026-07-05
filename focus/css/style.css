@@ -2890,8 +2890,8 @@ img, svg, canvas { display: block; }
   border-radius: 23%;
   background: linear-gradient(135deg, #E8FF72, #BFFF47);
 }
-.get__icon-glow::before { filter: blur(10px); opacity: .46; }             /* tight edge bloom */
-.get__icon-glow::after  { filter: blur(26px); transform: scale(1.05); opacity: .22; } /* wide ambient falloff */
+.get__icon-glow::before { filter: blur(10px); opacity: .24; }             /* tight edge bloom */
+.get__icon-glow::after  { filter: blur(26px); transform: scale(1.05); opacity: .10; } /* wide ambient falloff */
 
 .get__icon-svg { position: relative; z-index: 1; display: block; width: 100%; height: 100%; }
 .get__icon-ring {
