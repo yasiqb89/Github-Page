@@ -11,11 +11,10 @@
 // one-time confirmation email FormSubmit sends to that inbox; once its link is
 // clicked, every later submission is delivered silently.
 //
-// Privacy note: the target address is visible in this file (and the public
-// repo). After activating, FormSubmit issues a random alias endpoint
-// (formsubmit.co/ajax/<hash>) that hides the real address from harvesters —
-// swap it into ENDPOINT below and the email is no longer exposed.
-const ENDPOINT = 'https://formsubmit.co/ajax/focusdevacc@gmail.com';
+// This is FormSubmit's random alias endpoint (issued after activating the
+// target inbox), NOT the raw email — so the destination address is not exposed
+// in this file or the public repo. It forwards to the activated inbox.
+const ENDPOINT = 'https://formsubmit.co/ajax/fbdf28697b5dfea20c5715f6f9fbb799';
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -167,9 +166,12 @@ export function initContact(lenis) {
     } catch (err) {
       sendBtn.classList.remove('is-sending');
       sendBtn.disabled = false;
+      // Fallback channel deliberately avoids exposing the email in source
+      // (the whole reason ENDPOINT uses FormSubmit's alias) — point at the
+      // public GitHub issues page instead.
       errEl.innerHTML =
-        'Something went wrong sending that. Please email ' +
-        '<a href="mailto:focusdevacc@gmail.com">focusdevacc@gmail.com</a> directly.';
+        'Something went wrong sending that. Please try again in a moment, or ' +
+        'reach us on <a href="https://github.com/yasiqb89/focus/issues" target="_blank" rel="noopener">GitHub</a>.';
       errEl.hidden = false;
     }
   });
