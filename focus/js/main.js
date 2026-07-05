@@ -9,6 +9,7 @@ import { initHeroGradient } from './heroGradient.js';
 import { initJourney } from './journey.js';
 import { initNotifications, initNumbersGrid } from './notifications.js';
 import { initStoryboard } from './storyboard.js';
+import { initContact } from './contact.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -90,6 +91,7 @@ async function init() {
   navAndProgress();
   setupNavLinks();
   setupMobileNav();
+  initContact(lenis);
 
   initHeroGradient(document.getElementById('hero-aura'));
   initGrid(document.getElementById('hero-grid'));
