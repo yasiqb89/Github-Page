@@ -36,33 +36,6 @@ const PARTICLE_FS = `
     gl_FragColor = vec4(uColor * a, a);
   }
 `;
-const WASH_VS = `
-  attribute vec2 aUnit;
-  uniform vec2 uCenter;
-  uniform float uRadius;
-  uniform vec2 uResolution;
-  uniform float uDpr;
-  varying vec2 vUv;
-  void main() {
-    vUv = aUnit;
-    vec2 pix = (uCenter + aUnit * uRadius) * uDpr;
-    vec2 clip = (pix / uResolution) * 2.0 - 1.0;
-    gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-  }
-`;
-const WASH_FS = `
-  precision mediump float;
-  uniform vec3 uColor;
-  uniform float uAlphaScale;
-  varying vec2 vUv;
-  void main() {
-    float d = length(vUv);
-    if (d > 1.0) discard;
-    float a = pow(smoothstep(1.0, 0.0, d), 1.8) * uAlphaScale;
-    gl_FragColor = vec4(uColor * a, a);
-  }
-`;
-
 function compile(gl, type, src) {
   const s = gl.createShader(type);
   gl.shaderSource(s, src);
@@ -99,10 +72,9 @@ export function createFieldGL(canvas, maxParticles) {
   } catch (e) { gl = null; }
   if (!gl) return { supported: false };
 
-  let particleProg, washProg;
+  let particleProg;
   try {
     particleProg = link(gl, PARTICLE_VS, PARTICLE_FS);
-    washProg = link(gl, WASH_VS, WASH_FS);
   } catch (e) {
     return { supported: false };
   }
@@ -115,25 +87,11 @@ export function createFieldGL(canvas, maxParticles) {
     uDpr: gl.getUniformLocation(particleProg, 'uDpr'),
     uColor: gl.getUniformLocation(particleProg, 'uColor'),
   };
-  const wLoc = {
-    aUnit: gl.getAttribLocation(washProg, 'aUnit'),
-    uCenter: gl.getUniformLocation(washProg, 'uCenter'),
-    uRadius: gl.getUniformLocation(washProg, 'uRadius'),
-    uResolution: gl.getUniformLocation(washProg, 'uResolution'),
-    uDpr: gl.getUniformLocation(washProg, 'uDpr'),
-    uColor: gl.getUniformLocation(washProg, 'uColor'),
-    uAlphaScale: gl.getUniformLocation(washProg, 'uAlphaScale'),
-  };
 
   // Interleaved dynamic buffer: [x, y, size, alpha] per particle.
   const STRIDE = 4;
   const posBuf = gl.createBuffer();
   const cpuBuf = new Float32Array(maxParticles * STRIDE);
-
-  const washBuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, washBuf);
-  // two triangles covering -1..1
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
 
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE);   // additive — mirrors Canvas2D 'lighter'
@@ -145,20 +103,6 @@ export function createFieldGL(canvas, maxParticles) {
     resize(width, height) {
       bw = width; bh = height;
       gl.viewport(0, 0, bw, bh);
-    },
-    // wash: one soft radial pool behind the particles
-    drawWash(cx, cy, radius, color, alphaScale, dpr) {
-      gl.useProgram(washProg);
-      gl.bindBuffer(gl.ARRAY_BUFFER, washBuf);
-      gl.enableVertexAttribArray(wLoc.aUnit);
-      gl.vertexAttribPointer(wLoc.aUnit, 2, gl.FLOAT, false, 0, 0);
-      gl.uniform2f(wLoc.uCenter, cx, cy);
-      gl.uniform1f(wLoc.uRadius, radius);
-      gl.uniform2f(wLoc.uResolution, bw, bh);
-      gl.uniform1f(wLoc.uDpr, dpr);
-      gl.uniform3f(wLoc.uColor, color[0] / 255, color[1] / 255, color[2] / 255);
-      gl.uniform1f(wLoc.uAlphaScale, alphaScale);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
     },
     // particles: caller fills a view of the shared CPU buffer via setParticle(),
     // then calls drawParticles(count) once.
@@ -186,7 +130,7 @@ export function createFieldGL(canvas, maxParticles) {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
     },
-    // Force the driver to fully compile/link/validate BOTH programs right now,
+    // Force the driver to fully compile/link/validate the program right now,
     // while the page is still loading and nothing is visible — not on the
     // canvas's first real frame. gl.compileShader/linkProgram queue work; many
     // WebGL driver implementations don't finish the actual pipeline setup
@@ -194,7 +138,7 @@ export function createFieldGL(canvas, maxParticles) {
     // first real draw happens exactly when this section scrolls into view
     // (see storyboard.js's IntersectionObserver-gated loop) — a one-time
     // stutter tied precisely to "scroll into Inside Focus," every page load.
-    // A throwaway 1×1 draw with each program pays that cost up front instead.
+    // A throwaway 1×1 draw pays that cost up front instead.
     warmup() {
       const savedBw = bw, savedBh = bh;
       gl.viewport(0, 0, 1, 1);
@@ -213,18 +157,6 @@ export function createFieldGL(canvas, maxParticles) {
       gl.uniform3f(pLoc.uColor, 0, 0, 0);
       gl.drawArrays(gl.POINTS, 0, 1);
 
-      gl.useProgram(washProg);
-      gl.bindBuffer(gl.ARRAY_BUFFER, washBuf);
-      gl.enableVertexAttribArray(wLoc.aUnit);
-      gl.vertexAttribPointer(wLoc.aUnit, 2, gl.FLOAT, false, 0, 0);
-      gl.uniform2f(wLoc.uCenter, 0, 0);
-      gl.uniform1f(wLoc.uRadius, 0.001);
-      gl.uniform2f(wLoc.uResolution, 1, 1);
-      gl.uniform1f(wLoc.uDpr, 1);
-      gl.uniform3f(wLoc.uColor, 0, 0, 0);
-      gl.uniform1f(wLoc.uAlphaScale, 0);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       // restore whatever real viewport was already set (resize() runs again
@@ -233,9 +165,7 @@ export function createFieldGL(canvas, maxParticles) {
     },
     dispose() {
       gl.deleteProgram(particleProg);
-      gl.deleteProgram(washProg);
       gl.deleteBuffer(posBuf);
-      gl.deleteBuffer(washBuf);
     },
   };
 }

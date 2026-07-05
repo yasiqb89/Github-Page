@@ -20,7 +20,7 @@ const fcos = (a) => SIN[(((a * TRIG_K) | 0) + (TRIG_N >> 2)) & (TRIG_N - 1)];
 const DEFAULT = {
   title: 'Everything you need to take your <span class="lime">attention</span> back.',
   line:  'Hover any tool to see how it keeps you focused.',
-  col:   [191, 255, 71],   // brand lime — the rest ring + wash
+  col:   [191, 255, 71],   // brand lime — the rest ring
 };
 
 // Perceptual luminance. Accent colours (blue/green/flame) are far less luminous
@@ -208,11 +208,11 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
   }
   function resize() {
     w = stage.clientWidth || 1; h = stage.clientHeight || 1;
-    // Cap the backing store to a pixel budget. The field is a soft, defocused
-    // bloom, so rendering it at a lower internal resolution and letting CSS
-    // upscale it is visually identical — but it bounds the per-frame fill cost
-    // (clearRect + the wash blit are pixel-bound) on 4K / 5K / ultrawide
-    // displays, which is the main source of scroll jank on high-res screens.
+    // Cap the backing store to a pixel budget. The field is soft and defocused,
+    // so rendering it at a lower internal resolution and letting CSS upscale it
+    // is visually identical — but it bounds the per-frame clearRect cost on
+    // 4K / 5K / ultrawide displays, which is the main source of scroll jank on
+    // high-res screens.
     const MAXPIX = 3.0e6;
     let rdpr = dpr;
     if (w * h * dpr * dpr > MAXPIX) rdpr = Math.sqrt(MAXPIX / (w * h));
@@ -420,47 +420,8 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     spc.fillStyle = g; spc.fillRect(0, 0, 8, 8);
   }
 
-  // ── ambient wash, baked once per colour ──
-  // The soft radial glow behind the particles. Re-creating a full-canvas
-  // gradient every frame churns memory and shades millions of pixels; instead we
-  // bake it into a small offscreen buffer (only when the colour changes) and blit
-  // it each frame — a soft gradient upscales with no visible artefacts.
-  const WASH = 512;
-  const washCv = document.createElement('canvas'); washCv.width = washCv.height = WASH;
-  const washc = washCv.getContext('2d');
-  let washKey = -1;
-  function buildWash(c) {
-    const key = (c[0] << 16) | (c[1] << 8) | c[2];
-    if (key === washKey) return;
-    washKey = key;
-    const k = Math.min(1.7, LIME_LUM / Math.max(1, LUM(c[0], c[1], c[2])));   // brightness compensation
-    washc.clearRect(0, 0, WASH, WASH);
-    const g = washc.createRadialGradient(WASH / 2, WASH / 2, 0, WASH / 2, WASH / 2, WASH / 2);
-    // Smooth, near-Gaussian falloff. A 3-stop ramp left visible contour rings on
-    // high-DPI / 4K screens (8-bit banding over the dark background); the extra
-    // stops dissolve the steps. Peak alpha kept low (~.11) so any residual 8-bit
-    // step is below the perceptual threshold — the static grain layer dithers the
-    // rest. Reads as a soft, premium pool rather than a banded wash.
-    g.addColorStop(0,    `rgba(${c[0]},${c[1]},${c[2]},${(.110 * k).toFixed(3)})`);
-    g.addColorStop(0.16, `rgba(${c[0]},${c[1]},${c[2]},${(.078 * k).toFixed(3)})`);
-    g.addColorStop(0.34, `rgba(${c[0]},${c[1]},${c[2]},${(.043 * k).toFixed(3)})`);
-    g.addColorStop(0.54, `rgba(${c[0]},${c[1]},${c[2]},${(.019 * k).toFixed(3)})`);
-    g.addColorStop(0.74, `rgba(${c[0]},${c[1]},${c[2]},${(.006 * k).toFixed(3)})`);
-    g.addColorStop(0.88, `rgba(${c[0]},${c[1]},${c[2]},${(.002 * k).toFixed(3)})`);
-    g.addColorStop(1,    `rgba(${c[0]},${c[1]},${c[2]},0)`);
-    washc.fillStyle = g; washc.fillRect(0, 0, WASH, WASH);
-  }
-
   // particles actually drawn this frame — the FPS guard trims this on slow devices
   let drawN = N;
-
-  // Ambient wash bloom (0 at rest → 1 while a feature is engaged). The idle ring
-  // is always drawn — it's a small contained mark — but the big radial glow pool
-  // is what made the section read as a separate glowing block; gating it to hover
-  // keeps the rest state flat, continuous with the neighbouring sections, and
-  // turns the glow into an intentional reveal. Eased per-frame so it blooms in /
-  // out smoothly instead of popping.
-  let washEngage = 0;
 
   const useGL = glR.supported;
 
@@ -472,47 +433,24 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     const cr = curC[0] | 0, cg = curC[1] | 0, cb = curC[2] | 0;
     const cx = bx + px * 26, cy = by + py * 18;
 
-    // Glow radius — kept tight so the bloom stays a contained pool behind the
-    // content rather than washing across the whole section.
-    const R = Math.min(w, h) * 0.42;
-
-    // Ease the wash toward its target: full while a feature is engaged, gone at rest.
-    washEngage += ((active === -1 ? 0 : 1) - washEngage) * 0.08;
-    const washOn = washEngage > 0.004;
-
+    // No background wash behind the particles, at rest or hovering — the field
+    // used to bloom a soft radial glow pool in on hover, but that read as a
+    // different, heavier object than the plain ring at rest instead of an
+    // enhancement of it. Engagement now reads purely through the particle
+    // re-formation + colour shift below, matching the rest state's minimalism.
     if (useGL) {
-      // The GL fragment shader computes the radial falloff analytically per
-      // pixel every frame, so there's no texture-bake cost to guard against —
-      // unlike the Canvas2D path below, the wash just redraws at the current
-      // colour with no caching/quantising needed.
       glR.clear();
-      if (washOn) {
-        const washK = Math.min(1.7, LIME_LUM / Math.max(1, LUM(cr, cg, cb)));
-        glR.drawWash(cx, cy, R, [cr, cg, cb], 0.11 * washK * washEngage, curRdpr);
-      }
     } else {
       ctx.clearRect(0, 0, w, h);
-      // Rebuilding the wash (a 512² multi-stop radial fill) and the sprite is only
-      // needed when the glow COLOUR changes — which only happens while curC eases
-      // toward a hovered feature's colour. Two guards keep that off the scroll path:
-      //  • quantise the colour to steps of 8 so a transition rebuilds a handful of
-      //    times instead of every frame — invisible on a soft, low-alpha bloom;
-      //  • never rebuild while actively scrolling — the last frame's wash is reused,
-      //    so a hover-then-scroll can't land a 260k-pixel gradient fill mid-scroll
-      //    (the exact cause of the post-hover scroll jitter). The hue catches up the
-      //    instant scroll settles.
+      // Rebuilding the sprite is only needed when the glow COLOUR changes —
+      // which only happens while curC eases toward a hovered feature's colour.
+      // Two guards keep that off the scroll path: quantise the colour to steps
+      // of 8 so a transition rebuilds a handful of times instead of every
+      // frame, and never rebuild while actively scrolling (reuse the last
+      // frame's sprite; the hue catches up the instant scroll settles).
       const qc = [cr & ~7, cg & ~7, cb & ~7];
-      // The sprite is needed every frame (the idle ring draws at rest too); the
-      // wash only while engaged. Skip rebuilds mid-scroll, but never skip a first
-      // build, or the field renders blank on scroll-in.
       const canBuild = spriteKey === -1 || performance.now() - lastScrollAt >= 90;
       if (canBuild) buildSprite(qc);
-      if (washOn) {
-        if (canBuild || washKey === -1) buildWash(qc);
-        ctx.globalAlpha = washEngage;
-        ctx.drawImage(washCv, cx - R, cy - R, R * 2, R * 2);
-        ctx.globalAlpha = 1;
-      }
     }
 
     // At rest the brand arc rotates almost imperceptibly (~1 rev / 90s): the
