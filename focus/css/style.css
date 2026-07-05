@@ -210,20 +210,69 @@ img, svg, canvas { display: block; }
 .nav__link:active { transform: translateY(0) scale(.97); }
 @media (max-width: 680px) { .nav__links { display: none; } }
 
-/* lime header CTA — the app's accent button pairing (#BFFF47 on #233600) */
-.nav__cta {
-  margin-left: clamp(22px, 3vw, 44px);
+/* lime header CTA — .nav__cta now only positions the button; the pill's own
+   look/hover-fill comes from .ih-btn below (shared with the mobile CTA). */
+.nav__cta { margin-left: clamp(22px, 3vw, 44px); }
+
+/* ── Interactive hover button — "Get in touch" ──
+   A lime dot sits beside the label at rest. On hover it scales up ~80x from
+   behind the text, filling the whole pill (clipped by the pill's own
+   overflow:hidden, so no need to match its size exactly) while the resting
+   label slides right and fades, and a second label+arrow layer slides in
+   from the right to settle just off-center — the label swap reads as the
+   dot "becoming" the button. Pure CSS, gated to fine-pointer devices; touch
+   just gets the resting pill (fully functional either way). The visible
+   text exists twice (rest + reveal) purely for the animation, so both are
+   aria-hidden and the link carries its own aria-label as the one true name. */
+.ih-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.05);
+  padding: 8px 20px;
   font-size: 13px; font-weight: 700; letter-spacing: .03em;
-  padding: 8px 18px; border-radius: 50px;
-  background: var(--lime); color: #233600;
-  border: 1px solid transparent;
-  transition: box-shadow 200ms var(--ease), transform 150ms var(--ease);
+  color: var(--ink);
   white-space: nowrap;
+  transition: border-color 200ms var(--ease), transform 150ms var(--ease);
 }
+.ih-btn:active { transform: scale(0.97); }
+.ih-btn__inner { display: flex; align-items: center; gap: 8px; }
+.ih-btn__dot {
+  width: 8px; height: 8px; flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--lime);
+  transform: scale(1);
+  transition: transform .38s var(--ease);
+}
+.ih-btn__label {
+  display: inline-block;
+  transition: transform .38s var(--ease), opacity .3s var(--ease);
+}
+.ih-btn__reveal {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  color: #233600;
+  transform: translateX(46px);
+  opacity: 0;
+  transition: transform .38s var(--ease), opacity .3s var(--ease);
+  pointer-events: none;
+}
+.ih-btn__arrow { width: 15px; height: 15px; flex-shrink: 0; }
 @media (hover: hover) and (pointer: fine) {
-  .nav__cta:hover { box-shadow: 0 0 26px rgba(191,255,71,.5); transform: translateY(-1px); }
+  .ih-btn:hover { border-color: rgba(255,255,255,.24); }
+  .ih-btn:hover .ih-btn__dot { transform: scale(80); }
+  .ih-btn:hover .ih-btn__label { transform: translateX(46px); opacity: 0; }
+  .ih-btn:hover .ih-btn__reveal { transform: translateX(-6px); opacity: 1; }
 }
-.nav__cta:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .ih-btn__dot, .ih-btn__label, .ih-btn__reveal { transition: none; }
+}
+/* larger variant used standalone in the mobile menu */
+.ih-btn--lg { padding: 13px 28px; font-size: 15px; }
+.ih-btn--lg .ih-btn__arrow { width: 17px; height: 17px; }
 @media (prefers-reduced-motion: reduce) { .nav__line { transform: scaleX(1); transition: opacity .5s var(--ease); } }
 
 /* Paper variant — engaged (ScrollTrigger toggleClass) while the cream Meet
@@ -302,15 +351,20 @@ img, svg, canvas { display: block; }
 .nav__mobile.open .nav__mobile-link:nth-child(2) { transition-delay: .1s; }
 .nav__mobile.open .nav__mobile-link:nth-child(3) { transition-delay: .14s; }
 .nav__mobile-link:active { color: var(--lime); }
+/* .nav__mobile-cta now only supplies the menu-entrance choreography (fade +
+   slide up, staggered after the two links above); the pill's look/hover-fill
+   comes from .ih-btn--lg. */
 .nav__mobile-cta {
-  font-size: 15px; font-weight: 700; letter-spacing: .03em;
-  padding: 13px 30px; border-radius: 50px;
-  background: var(--lime); color: #233600;
   opacity: 0; transform: translateY(12px);
   transition: opacity .25s var(--ease) .18s, transform .25s var(--ease) .18s;
 }
 .nav__mobile.open .nav__mobile-cta { opacity: 1; transform: none; }
-.nav__mobile-cta:active { transform: scale(0.97); }
+/* .ih-btn's own :hover/:active transitions are re-declared here at higher
+   specificity (pseudo-class + two classes) so the entrance stagger above
+   never delays the hover dot-fill or the press feedback — those two
+   transitions serve entirely different moments, not the same one. */
+.nav__mobile-cta.ih-btn:hover { transition: border-color 200ms var(--ease); }
+.nav__mobile-cta.ih-btn:active { transition: transform 150ms var(--ease); }
 @media (prefers-reduced-motion: reduce) {
   .nav__mobile, .nav__mobile-link, .nav__mobile-cta { transition-duration: .01ms !important; transition-delay: 0s !important; }
 }
