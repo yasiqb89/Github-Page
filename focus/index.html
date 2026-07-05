@@ -27,6 +27,9 @@
 
   <link rel="preconnect" href="https://api.fontshare.com" crossorigin/>
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin/>
+  <!-- GSAP/Lenis drive nearly every animation on the site — preconnect so the
+       modulepreload below doesn't wait on a fresh DNS+TLS handshake first. -->
+  <link rel="preconnect" href="https://esm.sh" crossorigin/>
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&f[]=clash-display@600&f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
   <!-- True no-JS fallback: the preloader and every scroll-reveal system depend
@@ -1066,7 +1069,7 @@
     <span class="footer__logo"><svg class="nav__mark" viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="#BFFF47" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="34.31 9.67" transform="rotate(-90 10 10)" filter="url(#nav-arc-glow)"/></svg>Focus</span>
     <div class="footer__links">
       <a href="https://yasiqb89.github.io/Github-Page/focus/privacy-policy/">Privacy</a>
-      <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Terms</a>
+      <a href="https://yasiqb89.github.io/Github-Page/terms/">Terms</a>
     </div>
     <span class="footer__copy">© 2026 Focus · built for deep work</span>
   </div>

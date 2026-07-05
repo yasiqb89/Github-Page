@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yasiqb89.github.io/Github-Page/sitemap.xml
