@@ -234,6 +234,11 @@ img, svg, canvas { display: block; }
   background: rgba(255,255,255,.05);
   padding: 8px 20px;
   font-size: 13px; font-weight: 700; letter-spacing: .03em;
+  /* the body's global line-height (1.6) made the text's line-box much taller
+     than the 15px arrow icon, so centering the two boxes left the arrow
+     looking misaligned against the glyphs rather than the box — tight
+     line-height brings the line-box close to the actual glyph height. */
+  line-height: 1;
   color: var(--ink);
   white-space: nowrap;
   transition: border-color 200ms var(--ease), transform 150ms var(--ease);
@@ -827,7 +832,14 @@ img, svg, canvas { display: block; }
 .hero__inner { grid-column: 1 / span 7; padding-top: 120px; padding-bottom: 100px; }
 .hero__eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
 .hero__title { font-size: clamp(52px, 9.8vw, 125px); font-weight: 900; line-height: .96; letter-spacing: -.045em; margin-bottom: 28px; color: var(--ink-display); }
-.h-line-wrap { display: block; overflow: hidden; padding-right: 0.06em; }
+/* line-height: .96 on .hero__title (tight, deliberate, for the stacked
+   display headline) makes the line-box slightly shorter than the glyphs'
+   actual extent, so a descender like the "y" in "your" got clipped by this
+   wrapper's overflow:hidden (needed to contain the entrance slide-in).
+   padding-bottom gives the clip boundary room below the tight line-box; the
+   matching negative margin cancels its contribution to layout, so the two
+   stacked lines keep their intended tight spacing. */
+.h-line-wrap { display: block; overflow: hidden; padding-right: 0.06em; padding-bottom: 0.16em; margin-bottom: -0.16em; }
 .h-line { display: block; }
 .hero__title .word { display: inline-block; }
 .hero__lead { font-size: clamp(16px, 1.8vw, 21px); color: var(--ink-2); line-height: 1.6; max-width: 520px; margin-bottom: 40px; }
@@ -2953,12 +2965,22 @@ img, svg, canvas { display: block; }
   padding-top: max(clamp(24px, 3.4vw, 40px), env(safe-area-inset-top));
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Frosted glass, not a solid panel: translucent tint over a heavy blur +
+     saturation boost (the same recipe as Apple's material/vibrancy effect),
+     so the hero behind bleeds through, softened. A faint top-left sheen and
+     lime hint keep it from reading as plain grey glass. Bounded to a ~460px
+     modal panel that's only ever open occasionally — nothing like the cost
+     a sitewide always-on blur (e.g. the nav) would carry. */
   background:
-    radial-gradient(120% 60% at 100% 0%, rgba(191,255,71,.06), transparent 60%),
-    #16181499;
-  background-color: #161814;
-  border-left: 1px solid rgba(255,255,255,.08);
-  box-shadow: -30px 0 60px -20px rgba(0,0,0,.6);
+    linear-gradient(155deg, rgba(255,255,255,.07), rgba(255,255,255,0) 44%),
+    radial-gradient(120% 60% at 100% 0%, rgba(191,255,71,.07), transparent 60%),
+    rgba(20,22,17,.46);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  backdrop-filter: blur(30px) saturate(150%);
+  border-left: 1px solid rgba(255,255,255,.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    -30px 0 60px -20px rgba(0,0,0,.6);
   transform: translateX(100%);
   transition: transform .5s var(--ease);
   will-change: transform;

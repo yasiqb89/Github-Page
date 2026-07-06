@@ -155,18 +155,34 @@ function setupFlowDemo() {
   });
 
   let loaded = false;
+  const load = () => { if (!loaded) { loaded = true; iframe.src = src; } };
+
+  // Load during genuine idle time, disconnected from scroll entirely — a real
+  // trace showed this bundle's first parse/compile costing ~100ms of main-
+  // thread time, and #block sits immediately after Inside Focus, so the old
+  // "load within 150px of the viewport" trigger fired that ~100ms freeze
+  // WHILE the user was actively mid-scroll through that exact transition
+  // (the reported jitter there). requestIdleCallback explicitly only runs
+  // once the browser has spare time and yields to any real work/input, so
+  // this pays the cost while the visitor is just reading the hero — by the
+  // time they scroll anywhere near #block, it's already done. The timeout
+  // is a safety net for a tab that's never truly idle (e.g. the WebGL/canvas
+  // loops keep the thread lightly busy); Safari has no requestIdleCallback,
+  // so it gets a fixed delay instead.
+  if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 6000 });
+  else setTimeout(load, 2500);
+
+  // Safety net for a very fast scroller who reaches #block before the idle
+  // callback above has fired — same proximity-based load as before, now just
+  // a fallback rather than the primary trigger. Freeze/resume (unaffected)
+  // still gates the iframe's own rAF loop while it's off-screen either way.
   const io = new IntersectionObserver(([entry]) => {
     if (entry.isIntersecting) {
-      if (!loaded) { loaded = true; iframe.src = src; }
-      else if (frozen) { frozen = false; if (resume) resume(); }
-      frozen = false;
+      load();
+      if (frozen) { frozen = false; if (resume) resume(); }
     } else if (loaded) {
       frozen = true;
     }
-    // 150px margin (was 400): the trace showed the loop staying awake through
-    // the whole neighbouring Habits/Journey zone — the demo is tall, so a wide
-    // margin kept it "near" for most of the lower page. Resume is instant
-    // (queued rAF flush), so a tight margin costs nothing visually.
   }, { rootMargin: '150px 0px' });
   io.observe(iframe);
 }

@@ -662,9 +662,24 @@ export function initStoryboard(section, gsap, lenis, ScrollTrigger) {
     running = entries[0].isIntersecting;
     if (running) lastT = 0;                 // don't let the gap skew the dt average
     if (running && !raf) raf = requestAnimationFrame(loop);
-    if (running && !fired) { fired = true; measureChips(); runEntrance(); }
   }, { threshold: 0.1 });
   io.observe(section);
+  // Entrance choreography (icons/line/title fading and sweeping in, particles
+  // assembling) used to share the threshold above — firing as soon as a
+  // sliver of the section was visible meant it played mid-scroll, competing
+  // with the scroll gesture itself instead of reading as a reveal. Splitting
+  // it into its own observer at a much higher threshold means it only plays
+  // once the section has substantially arrived; the render loop above still
+  // starts early (at 10%) so hovering/the idle ring are never left blank.
+  // once:true via manual disconnect — it has exactly one job, ever.
+  const entranceIo = new IntersectionObserver((entries) => {
+    if (!entries[0].isIntersecting || fired) return;
+    fired = true;
+    measureChips();
+    runEntrance();
+    entranceIo.disconnect();
+  }, { threshold: 0.75 });
+  entranceIo.observe(section);
   // returning to the tab leaves a long gap; reset the dt clock so the guard
   // doesn't misread it as one slow frame.
   document.addEventListener('visibilitychange', () => { if (!document.hidden) lastT = 0; }, { passive: true });
