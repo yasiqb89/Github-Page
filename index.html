@@ -1,39 +1,1169 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="FocusApp support and legal pages.">
-    <title>FocusApp</title>
-    <link rel="stylesheet" href="assets/styles.css">
-  </head>
-  <body>
-    <header class="site-header">
-      <a class="brand" href="./" aria-label="FocusApp home">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span>FocusApp</span>
-      </a>
-      <nav aria-label="Legal">
-        <a href="focus/privacy-policy/">Privacy Policy</a>
-        <a href="terms/">Terms</a>
-        <a href="faq/">FAQ</a>
-      </nav>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Focus — Take back your time</title>
+  <meta name="description" content="Session-based focus with ScreenTime blocking, 31 habit modes, and an identity that grows every time you show up."/>
+  <meta name="theme-color" content="#141414"/>
+  <meta name="color-scheme" content="dark"/>
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png"/>
+  <link rel="canonical" href="https://ryzlo.net/"/>
+
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Focus"/>
+  <meta property="og:title" content="Focus — Take back your time"/>
+  <meta property="og:description" content="Session-based focus with ScreenTime blocking, 31 habit modes, and an identity that grows every time you show up."/>
+  <meta property="og:url" content="https://ryzlo.net/"/>
+  <meta property="og:image" content="https://ryzlo.net/img/og-image.png"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Focus — Take back your time"/>
+  <meta name="twitter:description" content="Session-based focus with ScreenTime blocking, 31 habit modes, and an identity that grows every time you show up."/>
+  <meta name="twitter:image" content="https://ryzlo.net/img/og-image.png"/>
+
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin/>
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin/>
+  <!-- GSAP/Lenis drive nearly every animation on the site — preconnect so the
+       modulepreload below doesn't wait on a fresh DNS+TLS handshake first. -->
+  <link rel="preconnect" href="https://esm.sh" crossorigin/>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&f[]=clash-display@600&f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <!-- True no-JS fallback: the preloader and every scroll-reveal system depend
+       on js/main.js (which itself depends on the gsap/lenis ES modules loading
+       from esm.sh) to ever remove their hidden state. Without this, a no-JS
+       visitor sees a permanent black screen. -->
+  <noscript>
+    <style>
+      #preloader { display: none !important; }
+      .reveal, .r-up, .reveal-children > *, .r-clip {
+        opacity: 1 !important; transform: none !important; clip-path: none !important;
+      }
+    </style>
+  </noscript>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "gsap":               "https://esm.sh/gsap@3.12.5",
+      "gsap/ScrollTrigger": "https://esm.sh/gsap@3.12.5/ScrollTrigger",
+      "lenis":              "https://esm.sh/lenis@1.1.14"
+    }
+  }
+  </script>
+  <link rel="modulepreload" href="https://esm.sh/gsap@3.12.5" crossorigin/>
+  <link rel="modulepreload" href="https://esm.sh/gsap@3.12.5/ScrollTrigger" crossorigin/>
+  <link rel="modulepreload" href="https://esm.sh/lenis@1.1.14" crossorigin/>
+</head>
+<body>
+
+<a class="skip-link" href="#hero">Skip to content</a>
+
+<!-- Preloader — Kinetic Wordmark (final word flies up to become the nav logo) -->
+<div id="preloader" aria-hidden="true">
+  <div class="kw__bg"></div>
+  <div class="kw"><span class="kw__word" id="kw-word"></span></div>
+</div>
+
+<!-- Progress hairline -->
+<div class="prog" aria-hidden="true"><span class="prog__fill" data-prog></span></div>
+
+<!-- Nav -->
+<nav id="nav">
+  <a class="nav__logo magnetic" href="#hero"><svg class="nav__mark" viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true"><defs><filter id="nav-arc-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#BFFF47" flood-opacity="0.65"/></filter></defs><circle cx="10" cy="10" r="7" stroke="#BFFF47" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="34.31 9.67" transform="rotate(-90 10 10)" filter="url(#nav-arc-glow)"/></svg>Focus</a>
+  <ul class="nav__links" role="list">
+    <li><a class="nav__link" href="#problem">Problem</a></li>
+    <li><a class="nav__link" href="#overview">Features</a></li>
+    <li><a class="nav__link" href="#modes">Modes</a></li>
+  </ul>
+  <a href="https://github.com/yasiqb89/focus/issues" class="nav__cta ih-btn" aria-label="Get in touch" data-contact-open aria-haspopup="dialog">
+    <span class="ih-btn__inner" aria-hidden="true">
+      <span class="ih-btn__dot"></span>
+      <span class="ih-btn__label">Get in touch</span>
+    </span>
+    <span class="ih-btn__reveal" aria-hidden="true">
+      <span>Get in touch</span>
+      <svg class="ih-btn__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    </span>
+  </a>
+  <button id="navToggle" class="nav__toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navMobile">
+    <span class="nav__toggle-bar"></span>
+    <span class="nav__toggle-bar"></span>
+    <span class="nav__toggle-bar"></span>
+  </button>
+  <span class="nav__line" aria-hidden="true"></span>
+</nav>
+
+<div id="navMobile" class="nav__mobile" aria-hidden="true">
+  <ul class="nav__mobile-links" role="list">
+    <li><a class="nav__mobile-link" href="#problem">Problem</a></li>
+    <li><a class="nav__mobile-link" href="#overview">Features</a></li>
+    <li><a class="nav__mobile-link" href="#modes">Modes</a></li>
+  </ul>
+  <a href="https://github.com/yasiqb89/focus/issues" class="nav__mobile-cta ih-btn ih-btn--lg" aria-label="Get in touch" data-contact-open aria-haspopup="dialog">
+    <span class="ih-btn__inner" aria-hidden="true">
+      <span class="ih-btn__dot"></span>
+      <span class="ih-btn__label">Get in touch</span>
+    </span>
+    <span class="ih-btn__reveal" aria-hidden="true">
+      <span>Get in touch</span>
+      <svg class="ih-btn__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    </span>
+  </a>
+</div>
+
+<!-- ════════════════════════════════════════
+     HERO  (midnight)
+════════════════════════════════════════ -->
+<section class="s s--blk hero" id="hero" tabindex="-1" style="--from:#141414;--to:#141414">
+  <div class="hero__atmo" aria-hidden="true">
+    <canvas class="hero__aura" id="hero-aura" aria-hidden="true"></canvas>
+    <canvas class="hero__grid" id="hero-grid" aria-hidden="true"></canvas>
+  </div>
+  <div class="hero__layout page-grid">
+    <div class="hero__inner">
+      <p class="hero__eyebrow reveal"><span class="dot"></span>Focus · iOS 17+</p>
+      <h1 class="hero__title">
+        <span class="h-line-wrap"><span class="h-line">Take back</span></span>
+        <span class="h-line-wrap"><span class="h-line">your <span class="lime voice">time</span>.</span></span>
+      </h1>
+      <p class="hero__lead reveal">Build better habits, reduce distractions, and make space for the things that matter.</p>
+      <div class="hero__cta reveal">
+        <a class="store-btn store-btn--lime magnetic" data-magnet="0.22" href="#get" aria-label="Coming soon to the App Store">
+          <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+          <span class="store-btn__text">
+            <span class="store-btn__sm">Coming soon to the</span>
+            <span class="store-btn__lg">App Store</span>
+          </span>
+        </a>
+        <a class="store-btn store-btn--ghost magnetic" data-magnet="0.22" href="#get" aria-label="Coming soon to Chrome">
+          <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
+          <span class="store-btn__text">
+            <span class="store-btn__sm">Coming soon to</span>
+            <span class="store-btn__lg">Chrome</span>
+          </span>
+        </a>
+      </div>
+    </div>
+    <div class="hero__devices" aria-hidden="true">
+      <span class="hero__devices-glow"></span>
+      <img class="hero__phone hero__phone--back" src="img/hero-phone-back.webp" alt="" width="759" height="1500" decoding="async">
+      <img class="hero__phone hero__phone--front" src="img/hero-phone-front.webp" alt="" width="1013" height="1500" decoding="async">
+    </div>
+  </div>
+  <span class="hero__scrollcue" aria-hidden="true">scroll</span>
+</section>
+
+<!-- ════════════════════════════════════════
+     PROBLEM STATEMENT
+════════════════════════════════════════ -->
+<section class="s s--blk problem" id="problem" style="--from:#141414;--to:#141414">
+  <div class="problem__sticky">
+    <div class="problem__noise" aria-hidden="true"></div>
+    <div class="problem__layout page-grid">
+      <div class="problem__copy">
+        <p class="problem__kicker"><svg class="kicker__ring" viewBox="0 0 20 20" aria-hidden="true"><circle class="kicker__ring-track" cx="10" cy="10" r="8"/><circle class="kicker__ring-fill" cx="10" cy="10" r="8"/></svg>The real problem</p>
+        <p class="problem__line">Your attention is not <span class="lime">weak.</span></p>
+        <p class="problem__line">Your environment is <span class="lime">loud.</span></p>
+        <p class="problem__line">Every ping is <span class="lime">engineered</span> to win.</p>
+        <p class="problem__line">The problem was never <span class="lime voice">you.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SECTION 1 — NUMBERS  (black)
+════════════════════════════════════════ -->
+<section class="s s--blk numbers" id="numbers" style="--from:#141414;--to:#141414">
+  <div class="numbers__noise" aria-hidden="true"></div>
+  <div class="numbers__wrap">
+
+    <header class="numbers__header">
+      <p class="kicker r-up">The cost</p>
+      <h2 class="numbers__hed r-scroll" data-scroll-reveal>
+        On average, <span class="lime" data-days-lost>106</span> days a year<br>go to the <span class="lime voice">scroll.</span>
+      </h2>
     </header>
 
-    <main class="page-shell">
-      <section class="intro">
-        <p class="eyebrow">Support and Legal</p>
-        <h1>FocusApp policies</h1>
-        <p>
-          Official support and legal pages for FocusApp. Use the privacy policy
-          link below for App Store Connect and in-app subscription settings.
-        </p>
-        <div class="actions" aria-label="Primary links">
-          <a class="button" href="focus/privacy-policy/">Privacy Policy</a>
-          <a class="button secondary" href="terms/">Terms of Use</a>
-          <a class="button secondary" href="faq/">FAQ</a>
+    <!-- The year as 12 months — screen time burns whole months,
+         Focus relights the slice it gives back (slider-driven). -->
+    <div class="numbers__year reveal">
+      <div class="numbers__viz" role="img" data-year aria-label="Your year, by the month">
+        <div class="numbers__months">
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
+          <span class="numbers__month"><i class="numbers__month-fill"></i></span>
         </div>
-      </section>
-    </main>
-  </body>
+        <div class="numbers__mlabels">
+          <span class="numbers__mlabel" data-full="Jan" data-abbr="J"></span>
+          <span class="numbers__mlabel" data-full="Feb" data-abbr="F"></span>
+          <span class="numbers__mlabel" data-full="Mar" data-abbr="M"></span>
+          <span class="numbers__mlabel" data-full="Apr" data-abbr="A"></span>
+          <span class="numbers__mlabel" data-full="May" data-abbr="M"></span>
+          <span class="numbers__mlabel" data-full="Jun" data-abbr="J"></span>
+          <span class="numbers__mlabel" data-full="Jul" data-abbr="J"></span>
+          <span class="numbers__mlabel" data-full="Aug" data-abbr="A"></span>
+          <span class="numbers__mlabel" data-full="Sep" data-abbr="S"></span>
+          <span class="numbers__mlabel" data-full="Oct" data-abbr="O"></span>
+          <span class="numbers__mlabel" data-full="Nov" data-abbr="N"></span>
+          <span class="numbers__mlabel" data-full="Dec" data-abbr="D"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="numbers__footer">
+      <p class="numbers__moments reveal">Enough for <span class="lime" data-dinners>48</span> family dinners, <span class="lime" data-gym>32</span> gym sessions, and <span class="lime" data-deep>26</span> days of deep work.</p>
+      <div class="numbers__control reveal">
+        <p class="numbers__control-lead">That's the average. <span class="lime voice">Now try yours.</span></p>
+        <div class="numbers__readout" aria-hidden="true"><span data-screen>7</span><span class="numbers__readout-unit">h a day</span></div>
+        <input type="range" id="screenSlider" class="slider"
+          min="2" max="12" step="0.5" value="7"
+          aria-label="Average daily screen time in hours"/>
+        <div class="numbers__ticks" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p class="sr-only" aria-live="polite" data-slider-live></p>
+      </div>
+    </div>
+
+  </div><!-- /.numbers__wrap -->
+</section>
+
+<!-- ════════════════════════════════════════
+     SECTION ✦ — MEET FOCUS  (intro)
+     Vertical order: kicker, headline, the floating phone (unchanged, centred),
+     then a two-line supporting line.
+════════════════════════════════════════ -->
+<section class="turn" id="turn" style="--from:#F6F3EC;--to:#F6F3EC">
+  <div class="turn__stage">
+    <div class="turn__veil" aria-hidden="true"></div>
+    <div class="turn__inner wrap">
+      <p class="kicker r-up" style="justify-content:center">Meet Focus</p>
+      <h2 class="hed r-scroll turn__head" data-scroll-reveal data-sr-ink="var(--paper-ink)">Your day, spent the way<br>you <span class="lime voice">meant to</span>.</h2>
+      <div class="turn__media" aria-hidden="true">
+        <img src="img/turn-phone-float.webp" width="1115" height="1720" loading="lazy" alt="">
+        <div class="turn__bloom" aria-hidden="true"></div>
+      </div>
+    </div>
+    <!-- Baseline pairing: a heavy statement line (left) and a quiet subtext
+         (right). Both scrub in from the bottom, staged — left first, right on
+         further scroll — via --lp/--rp driven by setupMeetFocusBaseline. Each
+         line's text lives in a .turn__clip (overflow-hidden) so the reveal is a
+         true rise into a window, not just a fade. -->
+    <div class="turn__baseline">
+      <p class="turn__lead"><span class="turn__clip">A way back to your own time.</span></p>
+      <p class="turn__note"><span class="turn__clip">The best parts of life rarely ask for attention as loudly as everything else. Make room for them by turning your phone from a source of drift into a place of calm direction.</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SECTION ✦ — FEATURE SHOWCASE  (hover-driven ambient field)
+════════════════════════════════════════ -->
+<section class="s s--blk af" id="overview" style="--from:#141414;--to:#141414">
+  <canvas class="af__canvas" id="af-canvas" aria-hidden="true"></canvas>
+
+  <!-- rebuilt app fragments — flank the copy, blend into the field; shown on hover.
+       Faithful HTML/CSS rebuilds of the real SwiftUI views + the app's sample data. -->
+  <div class="af__exhibits" aria-hidden="true">
+
+    <!-- ▸ Scheduled blocks (icon data-i 2) ──────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="2">
+      <div class="afx-card afx-sched">
+        <div class="afx-card__head"><span>Up next</span><span class="afx-dot"></span></div>
+        <div class="afx-row">
+          <span class="afx-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="5.5" width="16" height="15" rx="3"/><path d="M4 10h16M8.5 3.2v3.6M15.5 3.2v3.6"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">Deep Work</span><span class="afx-row__sub">9:00 – 10:30 AM</span></span>
+          <span class="afx-row__meta">90m</span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">Gym</span><span class="afx-row__sub">6:00 PM</span></span>
+          <span class="afx-row__meta">45m</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="2">
+      <div class="afx-card afx-block">
+        <div class="afx-block__top">
+          <span class="afx-block__mode">Mindful</span>
+          <span class="afx-chip">Repeats daily</span>
+        </div>
+        <div class="afx-block__big">45 min block</div>
+        <div class="afx-block__div"></div>
+        <div class="afx-block__foot">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3.4v5.6c0 5-3.4 8.6-8 9.9C7.4 19.6 4 16 4 11V5.4L12 2z"/></svg>
+          <span>12 apps shielded</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ Weekly reports (icon data-i 8) ────────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="8">
+      <div class="afx-card afx-week">
+        <div class="afx-card__head"><span>Your week, quietly</span><span class="afx-week__range">Nov 18–24</span></div>
+        <div class="afx-week__big">8h 24m</div>
+        <div class="afx-week__copy">of intentional focus.<br>Twelve sessions, six clean days.</div>
+        <div class="afx-week__dots">
+          <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i>
+          <span>6 / 7 days consistent</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="8">
+      <div class="afx-card afx-bars">
+        <div class="afx-bars__plot">
+          <b style="height:46%"></b><b style="height:73%"></b><b style="height:38%"></b><b class="hi" style="height:100%"></b><b style="height:58%"></b><b class="empty"></b><b style="height:72%"></b>
+        </div>
+        <div class="afx-bars__axis">
+          <span>M<em>18</em></span><span>T<em>19</em></span><span>W<em>20</em></span><span>T<em>21</em></span><span>F<em>22</em></span><span>S<em>23</em></span><span>S<em>24</em></span>
+        </div>
+        <div class="afx-dims">
+          <div class="afx-dim"><span>Awareness</span><span class="afx-dim__track"><b style="width:78%"></b></span><em>78<small>+2</small></em></div>
+          <div class="afx-dim"><span>Depth</span><span class="afx-dim__track"><b style="width:71%"></b></span><em>71<small>+5</small></em></div>
+          <div class="afx-dim"><span>Alignment</span><span class="afx-dim__track"><b style="width:62%"></b></span><em>62<small>+1</small></em></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ Blocking (icon data-i 0) ─────────────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="0" style="--lac:#5AC8FA">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Blocking now</span><span class="afx-dot" style="background:var(--lac);box-shadow:0 0 9px var(--lac)"></span></div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">Social media</span><span class="afx-row__sub">Instagram, Twitter, TikTok</span></span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">Video & streaming</span><span class="afx-row__sub">YouTube, Netflix, Reels</span></span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">News & forums</span><span class="afx-row__sub">Reddit, Hacker News</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="0" style="--lac:#5AC8FA">
+      <div class="afx-card">
+        <div class="afx-bsess__mode">Deep Work</div>
+        <div class="afx-big-num" style="color:var(--lac)">47</div>
+        <div class="afx-bsess__label">apps & sites blocked</div>
+        <div class="afx-bsess__time">Session ends 10:30 AM</div>
+      </div>
+    </div>
+
+    <!-- ▸ Always-on (icon data-i 1) ────────────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="1" style="--lac:#FFD60A">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Always protected</span><span class="afx-dot" style="background:var(--lac);box-shadow:0 0 9px var(--lac)"></span></div>
+        <div class="afx-ao__big">24 / 7</div>
+        <div class="afx-ao__sub">No session required</div>
+        <div class="afx-ao__stat">
+          <span class="afx-ao__num" style="color:var(--lac)">312</span><span class="afx-ao__label">days protected</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="1" style="--lac:#FFD60A">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Always-blocked</span></div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3.4v5.6c0 5-3.4 8.6-8 9.9C7.4 19.6 4 16 4 11V5.4L12 2z"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">Adult content</span><span class="afx-row__sub">Blocked at all times</span></span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3.4v5.6c0 5-3.4 8.6-8 9.9C7.4 19.6 4 16 4 11V5.4L12 2z"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">Gambling sites</span><span class="afx-row__sub">Blocked at all times</span></span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3.4v5.6c0 5-3.4 8.6-8 9.9C7.4 19.6 4 16 4 11V5.4L12 2z"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">Custom list</span><span class="afx-row__sub">4 personal additions</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ App limits (icon data-i 3) ───────────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="3" style="--lac:#5E9DFF">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Today's limits</span></div>
+        <div class="afx-lim">
+          <div class="afx-lim__row"><span class="afx-lim__name">Instagram</span><span class="afx-lim__val">1h 22m <em>/ 2h</em></span></div>
+          <div class="afx-lim__bar"><b style="width:68%;background:linear-gradient(90deg,rgba(94,157,255,.6),#5E9DFF)"></b></div>
+        </div>
+        <div class="afx-lim afx-lim--hit">
+          <div class="afx-lim__row"><span class="afx-lim__name">TikTok</span><span class="afx-lim__val afx-lim__hit-label">Limit reached</span></div>
+          <div class="afx-lim__bar"><b style="width:100%;background:rgba(255,59,48,.7)"></b></div>
+        </div>
+        <div class="afx-lim">
+          <div class="afx-lim__row"><span class="afx-lim__name">Twitter / X</span><span class="afx-lim__val">52m <em>/ 1.5h</em></span></div>
+          <div class="afx-lim__bar"><b style="width:58%;background:linear-gradient(90deg,rgba(94,157,255,.6),#5E9DFF)"></b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="3" style="--lac:#5E9DFF">
+      <div class="afx-card">
+        <div class="afx-la__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+        <div class="afx-la__title">Time's up</div>
+        <div class="afx-la__app">TikTok</div>
+        <div class="afx-la__copy">2 hours reached. Come back tomorrow.</div>
+      </div>
+    </div>
+
+    <!-- ▸ Focus sessions (icon data-i 4) ───────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="4" style="--lac:#30D158">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Session active</span><span class="afx-dot" style="background:var(--lac);box-shadow:0 0 9px var(--lac)"></span></div>
+        <div class="afx-sess__ring">
+          <svg viewBox="0 0 80 80" width="80" height="80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="url(#sess-grad)" stroke-width="5"
+              stroke-dasharray="213.6" stroke-dashoffset="57" stroke-linecap="round"
+              transform="rotate(-90 40 40)"/>
+            <defs><linearGradient id="sess-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#30D158"/><stop offset="100%" stop-color="#7BFF7B"/>
+            </linearGradient></defs>
+            <text x="40" y="37" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="Satoshi,system-ui,sans-serif">47:23</text>
+            <text x="40" y="50" text-anchor="middle" fill="rgba(255,255,255,.38)" font-size="8" font-family="Satoshi,system-ui,sans-serif">remaining</text>
+          </svg>
+        </div>
+        <div class="afx-sess__name">Deep Work</div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="4" style="--lac:#30D158">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Session rules</span></div>
+        <div class="afx-rule">
+          <span class="afx-rule__dot" style="background:#FF3B30"></span>
+          <span class="afx-rule__val">Blocked</span><span class="afx-rule__label">Social apps</span>
+        </div>
+        <div class="afx-rule">
+          <span class="afx-rule__dot" style="background:#FF3B30"></span>
+          <span class="afx-rule__val">Blocked</span><span class="afx-rule__label">News & videos</span>
+        </div>
+        <div class="afx-rule">
+          <span class="afx-rule__dot" style="background:var(--lac)"></span>
+          <span class="afx-rule__val">Allowed</span><span class="afx-rule__label">Music & podcasts</span>
+        </div>
+        <div class="afx-rule">
+          <span class="afx-rule__dot" style="background:var(--lac)"></span>
+          <span class="afx-rule__val">Allowed</span><span class="afx-rule__label">Messages</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ CBT resistance (icon data-i 5) ───────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="5" style="--lac:#A78BFA">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Resistance prompt</span></div>
+        <div class="afx-cbt__q">Feeling the pull?</div>
+        <div class="afx-cbt__body">Name three things you can see around you right now. Take ten seconds.</div>
+        <div class="afx-cbt__tag" style="color:var(--lac)">Grounding · 4–7–8 breathing</div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="5" style="--lac:#A78BFA">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>This week</span></div>
+        <div class="afx-big-num" style="color:var(--lac)">14</div>
+        <div class="afx-cbt-stat__label">urges redirected</div>
+        <div class="afx-cbt-stat__row"><span>Avg. redirect delay</span><em>4.2s</em></div>
+        <div class="afx-cbt-stat__row"><span>Resistance rate</span><em>83%</em></div>
+      </div>
+    </div>
+
+    <!-- ▸ Smart insights (icon data-i 6) ───────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="6" style="--lac:#34C3E0">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Your best window</span></div>
+        <div class="afx-insight__peak">9 – 11 AM</div>
+        <div class="afx-insight__sub">2× deeper than afternoon</div>
+        <div class="afx-hour-chart">
+          <b style="height:18%"></b><b style="height:32%"></b><b style="height:52%"></b>
+          <b style="height:100%;background:var(--lac);box-shadow:0 0 10px rgba(52,195,224,.4)"></b>
+          <b style="height:86%;background:var(--lac);box-shadow:0 0 10px rgba(52,195,224,.3)"></b>
+          <b style="height:51%"></b><b style="height:37%"></b>
+          <b style="height:43%"></b><b style="height:29%"></b><b style="height:22%"></b>
+        </div>
+        <div class="afx-hour-axis">
+          <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>1p</span><span>2</span><span>3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="6" style="--lac:#34C3E0">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Patterns detected</span></div>
+        <div class="afx-icard">
+          <div class="afx-icard__title">Monday dip</div>
+          <div class="afx-icard__body">You start 22 min slower on Mondays. Begin with a low-friction task.</div>
+        </div>
+        <div class="afx-icard">
+          <div class="afx-icard__title">Morning edge</div>
+          <div class="afx-icard__body">Sessions before 11 AM average 2× longer completion rate.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ Momentum (icon data-i 7) ─────────────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="7" style="--lac:#FF9F0A">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Momentum</span><span class="afx-mom__delta" style="color:var(--lac)">↑ +4 this week</span></div>
+        <div class="afx-big-num" style="color:var(--lac)">87</div>
+        <div class="afx-mom__sub">building</div>
+        <div class="afx-mom__bars">
+          <b style="height:52%"></b><b style="height:61%"></b><b style="height:55%"></b>
+          <b style="height:70%"></b><b style="height:79%"></b><b style="height:100%;background:var(--lac);box-shadow:0 0 12px rgba(255,159,10,.45)"></b>
+        </div>
+        <div class="afx-mom__label">6-week trend</div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="7" style="--lac:#FF9F0A">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>This week</span></div>
+        <div class="afx-row">
+          <span class="afx-row__main"><span class="afx-row__title">Sessions kept</span></span>
+          <span class="afx-row__meta" style="color:var(--lac)">5 / 6</span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-row__main"><span class="afx-row__title">Hours reclaimed</span></span>
+          <span class="afx-row__meta" style="color:var(--lac)">8h 24m</span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-row__main"><span class="afx-row__title">Longest session</span></span>
+          <span class="afx-row__meta" style="color:var(--lac)">1h 42m</span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-row__main"><span class="afx-row__title">Momentum gained</span></span>
+          <span class="afx-row__meta" style="color:var(--lac)">+4 pts</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ Streaks & shields (icon data-i 9) ────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="9" style="--lac:#FF6026">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Current streak</span></div>
+        <div class="afx-big-num" style="color:var(--lac)">23 <sub>days</sub></div>
+        <div class="afx-streak__dots">
+          <i style="background:var(--lac);box-shadow:0 0 6px rgba(255,96,38,.5)"></i>
+          <i style="background:var(--lac);box-shadow:0 0 6px rgba(255,96,38,.5)"></i>
+          <i style="background:var(--lac);box-shadow:0 0 6px rgba(255,96,38,.5)"></i>
+          <i style="background:var(--lac);box-shadow:0 0 6px rgba(255,96,38,.5)"></i>
+          <i style="background:var(--lac);box-shadow:0 0 6px rgba(255,96,38,.5)"></i>
+          <i style="background:var(--lac);box-shadow:0 0 6px rgba(255,96,38,.5)"></i>
+          <i style="background:var(--lac);box-shadow:0 0 6px rgba(255,96,38,.5)"></i>
+        </div>
+        <div class="afx-streak__copy">Every day this week. Keep going.</div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="9" style="--lac:#FF6026">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Streak shields</span></div>
+        <div class="afx-sh__row">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--lac)"><path d="M12 2l8 3.4v5.6c0 5-3.4 8.6-8 9.9C7.4 19.6 4 16 4 11V5.4L12 2z"/></svg>
+          <div>
+            <div class="afx-sh__title">1 shield ready</div>
+            <div class="afx-sh__sub">Miss a day — it absorbs the break</div>
+          </div>
+        </div>
+        <div class="afx-sh__divider"></div>
+        <div class="afx-row">
+          <span class="afx-row__main"><span class="afx-row__title">Total earned</span></span>
+          <span class="afx-row__meta">3</span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-row__main"><span class="afx-row__title">Streak saved</span></span>
+          <span class="afx-row__meta">1×</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ Identity journey (icon data-i 10) ────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="10" style="--lac:#818CF8">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Stage 9</span></div>
+        <!-- Stage 9: inner ring + dense hexagon orbit + dot -->
+        <svg class="afx-sigil-hero" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="color:var(--lac);filter:drop-shadow(0 0 5px var(--lac))">
+          <circle cx="32" cy="32" r="7.6"/>
+          <circle cx="41.6" cy="32" r="10"/><circle cx="36.8" cy="40.3" r="10"/><circle cx="27.2" cy="40.3" r="10"/>
+          <circle cx="22.4" cy="32" r="10"/><circle cx="27.2" cy="23.7" r="10"/><circle cx="36.8" cy="23.7" r="10"/>
+          <circle cx="32" cy="32" r="3.6" fill="currentColor" stroke="none"/>
+        </svg>
+        <div class="afx-identity__name">The Intentional</div>
+        <div class="afx-identity__stmt">Every action is a choice made twice.</div>
+        <div class="afx-identity__prog">
+          <div class="afx-identity__prog-row">
+            <span>To The Unshaken</span><em style="color:var(--lac)">62%</em>
+          </div>
+          <div class="afx-dim__track">
+            <b style="width:62%;background:linear-gradient(90deg,rgba(129,140,248,.55),#818CF8)"></b>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="10" style="--lac:#818CF8">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Your journey</span></div>
+        <div class="afx-stage-item afx-stage--past">
+          <!-- Stage 8: pentagon of 5 rings + dot -->
+          <svg class="afx-stage__sigil" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:rgba(129,140,248,.52)">
+            <circle cx="32" cy="23.6" r="12"/><circle cx="40" cy="29.4" r="12"/><circle cx="36.9" cy="38.8" r="12"/><circle cx="27.1" cy="38.8" r="12"/><circle cx="24" cy="29.4" r="12"/>
+            <circle cx="32" cy="32" r="3.6" fill="currentColor" stroke="none"/>
+          </svg>
+          <div><span class="afx-stage__name">The Grounded</span><span class="afx-stage__note">Reached</span></div>
+        </div>
+        <div class="afx-stage-item afx-stage--now">
+          <!-- Stage 9: inner ring + dense hexagon orbit + dot -->
+          <svg class="afx-stage__sigil" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" style="color:var(--lac);filter:drop-shadow(0 0 3px var(--lac))">
+            <circle cx="32" cy="32" r="7.6"/>
+            <circle cx="41.6" cy="32" r="10"/><circle cx="36.8" cy="40.3" r="10"/><circle cx="27.2" cy="40.3" r="10"/>
+            <circle cx="22.4" cy="32" r="10"/><circle cx="27.2" cy="23.7" r="10"/><circle cx="36.8" cy="23.7" r="10"/>
+            <circle cx="32" cy="32" r="3.6" fill="currentColor" stroke="none"/>
+          </svg>
+          <div><span class="afx-stage__name afx-stage__name--now">The Intentional</span><span class="afx-stage__note" style="color:var(--lac)">Current</span></div>
+        </div>
+        <div class="afx-stage-item afx-stage--next">
+          <!-- Stage 10: double hexagon star-of-david + dot -->
+          <svg class="afx-stage__sigil" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:rgba(129,140,248,.26)">
+            <circle cx="42.4" cy="32" r="10.4"/><circle cx="37.2" cy="41" r="10.4"/><circle cx="26.8" cy="41" r="10.4"/><circle cx="21.6" cy="32" r="10.4"/><circle cx="26.8" cy="23" r="10.4"/><circle cx="37.2" cy="23" r="10.4"/>
+            <circle cx="37.5" cy="35.2" r="6.4"/><circle cx="32" cy="38.4" r="6.4"/><circle cx="26.5" cy="35.2" r="6.4"/><circle cx="26.5" cy="28.8" r="6.4"/><circle cx="32" cy="25.6" r="6.4"/><circle cx="37.5" cy="28.8" r="6.4"/>
+            <circle cx="32" cy="32" r="3.6" fill="currentColor" stroke="none"/>
+          </svg>
+          <div><span class="afx-stage__name">The Unshaken</span><span class="afx-stage__note">Next</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ Leaderboard (icon data-i 11) ─────────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="11" style="--lac:#FFD60A">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>This week</span></div>
+        <div class="afx-board-row">
+          <span class="afx-board__rank" style="color:#FFD60A">1</span>
+          <span class="afx-board__name">Alex M.</span>
+          <span class="afx-board__score">42h 15m</span>
+        </div>
+        <div class="afx-board-row">
+          <span class="afx-board__rank" style="color:rgba(255,255,255,.5)">2</span>
+          <span class="afx-board__name">Jordan K.</span>
+          <span class="afx-board__score">38h 02m</span>
+        </div>
+        <div class="afx-board-row">
+          <span class="afx-board__rank" style="color:#CD853F">3</span>
+          <span class="afx-board__name">Sam R.</span>
+          <span class="afx-board__score">31h 47m</span>
+        </div>
+        <div class="afx-board-row" style="opacity:.55">
+          <span class="afx-board__rank">4</span>
+          <span class="afx-board__name">Maria T.</span>
+          <span class="afx-board__score">28h 19m</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="11" style="--lac:#FFD60A">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Your rank</span></div>
+        <div class="afx-big-num" style="color:var(--lac)">#7</div>
+        <div class="afx-rank__score">24h 33m this week</div>
+        <div class="afx-rank__badge" style="color:var(--lac)">Top 12%</div>
+        <div class="afx-rank__gap">5h 22m behind #6</div>
+      </div>
+    </div>
+
+    <!-- ▸ Widgets & Live Activity (icon data-i 12) ──────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="12" style="--lac:#64D2FF">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Home screen</span></div>
+        <div class="afx-widget-sq">
+          <svg viewBox="0 0 80 80" style="position:absolute;inset:0;width:100%;height:100%">
+            <circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="4.5"/>
+            <circle cx="40" cy="40" r="30" fill="none" stroke="url(#wgt-grad)" stroke-width="4.5"
+              stroke-dasharray="188.5" stroke-dashoffset="50" stroke-linecap="round"
+              transform="rotate(-90 40 40)"/>
+            <defs><linearGradient id="wgt-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#64D2FF"/><stop offset="100%" stop-color="#7BFF7B"/>
+            </linearGradient></defs>
+          </svg>
+          <div class="afx-ws__inner">
+            <div class="afx-ws__time">2h 14m</div>
+            <div class="afx-ws__label">Deep Work</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="12" style="--lac:#64D2FF">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Lock screen</span></div>
+        <div class="afx-livepill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--lac)"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>
+          <span class="afx-livepill__label">Deep Work</span>
+          <span class="afx-livepill__time" style="color:var(--lac)">47:23</span>
+        </div>
+        <div class="afx-live__copy">Live on your lock screen — always one look away.</div>
+      </div>
+    </div>
+
+    <!-- ▸ Cloud sync (icon data-i 13) ──────────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="13" style="--lac:#7DD3FC">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Synced devices</span></div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="2" width="10" height="18" rx="2"/><path d="M12 17h.01"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">iPhone 16 Pro</span><span class="afx-row__sub">Just now</span></span>
+          <span class="afx-sync__ok" style="color:var(--lac)">✓</span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 20h8M12 17v3"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">MacBook Pro</span><span class="afx-row__sub">2 min ago</span></span>
+          <span class="afx-sync__ok" style="color:var(--lac)">✓</span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M8 18h8"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">iPad Air</span><span class="afx-row__sub">5 min ago</span></span>
+          <span class="afx-sync__ok" style="color:var(--lac)">✓</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="13" style="--lac:#7DD3FC">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Sync status</span></div>
+        <div class="afx-big-num" style="color:var(--lac)">3 / 3</div>
+        <div class="afx-sync-r__sub">devices up to date</div>
+        <div class="afx-row" style="margin-top:14px">
+          <span class="afx-row__main"><span class="afx-row__title">Sessions pushed</span></span>
+          <span class="afx-row__meta">7 today</span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-row__main"><span class="afx-row__title">Block changes</span></span>
+          <span class="afx-row__meta">Instant</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ Browser pairing (icon data-i 14) ─────────────────────── -->
+    <div class="af__exhibit af__exhibit--l" data-for="14" style="--lac:#6EE7B7">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Browser paired</span><span class="afx-dot" style="background:var(--lac);box-shadow:0 0 9px var(--lac)"></span></div>
+        <div class="afx-brow__badge">Chrome + Focus</div>
+        <div class="afx-brow__copy">Your session rules now apply everywhere — including the web.</div>
+        <div class="afx-row" style="margin-top:12px">
+          <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18" stroke-linecap="round"/><path d="M12 3c2.6 2.6 2.6 15.4 0 18"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">Deep Work active</span><span class="afx-row__sub">Web also protected</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="14" style="--lac:#6EE7B7">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Blocked in browser</span></div>
+        <div class="afx-row">
+          <span class="afx-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">youtube.com</span><span class="afx-row__sub">Session block active</span></span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">twitter.com</span><span class="afx-row__sub">Session block active</span></span>
+        </div>
+        <div class="afx-row">
+          <span class="afx-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg></span>
+          <span class="afx-row__main"><span class="afx-row__title">reddit.com</span><span class="afx-row__sub">Session block active</span></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="af__stage">
+
+    <!-- copy: frozen kicker + single morphing headline -->
+    <div class="af__copy">
+      <p class="kicker r-up af__kicker">Inside Focus</p>
+      <h2 class="af__title">Everything you need to take your <span class="lime voice">attention</span> back.</h2>
+      <p class="af__desc" aria-hidden="true"></p>
+    </div>
+
+    <!-- feature grid + morphing caption beneath it -->
+    <div class="af__tools">
+    <div class="af__row" role="tablist" aria-label="Features">
+      <button class="af__icon" role="tab" aria-selected="false" data-i="0" style="--ac:#FF9F0A" aria-label="Blocking">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="1" style="--ac:#FFD60A" aria-label="Always-on protection">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.2-2.8 7.2-7 8.5C7.8 18.2 5 15.2 5 11V6l7-3z"/><path d="M9 11.5l2 2 4-4.5"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="2" style="--ac:#BFFF47" aria-label="Scheduled blocks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="3" style="--ac:#5E9DFF" aria-label="App limits">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="4" style="--ac:#30D158" aria-label="Focus sessions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="5" style="--ac:#A78BFA" aria-label="CBT resistance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5A3.2 3.2 0 0 0 6.6 7 3 3 0 0 0 5 12a3 3 0 0 0 2 3 3.1 3.1 0 0 0 5 1.6"/><path d="M12 5.5A3.2 3.2 0 0 1 17.4 7 3 3 0 0 1 19 12a3 3 0 0 1-2 3 3.1 3.1 0 0 1-5 1.6"/><path d="M12 5.5v11"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="6" style="--ac:#34C3E0" aria-label="Smart insights">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15l4-4 3 2 5-6.5"/><path d="M4 20h16"/><circle cx="16" cy="6.5" r="1.6" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="7" style="--ac:#5AC8FA" aria-label="Momentum">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14l5-5 4 4 7-7"/><path d="M16 6h4v4"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="8" style="--ac:#8BE85F" aria-label="Weekly reports">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="12" width="3" height="7" rx="1"/><rect x="9.5" y="8" width="3" height="11" rx="1"/><rect x="15" y="14" width="3" height="5" rx="1"/><rect x="20" y="6" width="2.6" height="13" rx="1"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="9" style="--ac:#FF6026" aria-label="Stats, streaks and shields">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2c.5 3.5 4 4.8 4 8.5a5 5 0 0 1-10 0c0-2 .8-3.2 1.6-4.2.2 1.4 1 2.2 1.9 2.2 1.4 0 1.8-2.6 1.5-6.5z"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="10" style="--ac:#818CF8" aria-label="Identity journey">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V3"/><path d="M6 4h12l-2.6 3.6L18 11H6z"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="11" style="--ac:#FFD60A" aria-label="Leaderboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v4a4 4 0 0 1-8 0V4z"/><path d="M8 5.5H5.5V7a3 3 0 0 0 3 3M16 5.5h2.5V7a3 3 0 0 1-3 3"/><path d="M12 12v4M9 20h6M10 20l.4-4M14 20l-.4-4"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="12" style="--ac:#64D2FF" aria-label="Widgets and Live Activity">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="13" style="--ac:#7DD3FC" aria-label="Cloud sync">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.5a4 4 0 0 1-.5-8 5 5 0 0 1 9.6-1A3.6 3.6 0 0 1 17 18.5z"/><path d="M9.5 14h5M12.6 11.6 14.6 14l-2 2"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="14" style="--ac:#6EE7B7" aria-label="Browser pairing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18" stroke-linecap="round"/><path d="M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18"/></svg>
+      </button>
+    </div>
+    <p class="af__line">Hover any tool to see how it keeps you focused.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SECTION 2 — BLOCKING  (midnight)
+════════════════════════════════════════ -->
+<section class="s s--mid block" id="block" style="--from:#141414;--to:#141414">
+  <div class="page-grid block__grid">
+
+    <!-- left: copy -->
+    <div class="block__copy">
+      <p class="kicker r-up">Your attention</p>
+      <h2 class="hed r-scroll" data-scroll-reveal>Protect what<br>pulls you <span class="lime voice">forward</span>.</h2>
+      <!-- the pairing story in three quiet rows — staggers in via reveal-children -->
+      <div class="block__ledger reveal-children">
+        <div class="block__row"><span class="block__num">01</span><span>Start a session on your phone</span></div>
+        <div class="block__row"><span class="block__num">02</span><span>Your browser pairs with it, instantly</span></div>
+        <div class="block__row"><span class="block__num">03</span><span>End it, and everything unlocks together</span></div>
+      </div>
+    </div>
+
+    <!-- right: the handshake — live Safari demo + the session running on a
+         partial iPhone at the window's corner. Decorative; the ledger carries
+         the story for AT. -->
+    <div class="block__mockup-wrap block__mockup reveal">
+      <div class="mockup-combo">
+      <!-- inside the combo so it shares the window's exact left edge -->
+      <p class="block__tag" aria-hidden="true">Live flow — Deep Work</p>
+
+      <div class="block__window">
+        <div class="safari-crop">
+          <iframe class="safari-svg focus-flow-frame"
+                  data-src="focus-flow.html"
+                  scrolling="no"
+                  title="Focus blocking a session — Deep Work mode">
+          </iframe>
+          <!-- one-shot keyline flash — pre-rendered lime glow, only opacity animates -->
+          <div class="block__flash" aria-hidden="true"></div>
+        </div>
+        <!-- paired chip — settles onto the window's top edge as the beat lands -->
+        <span class="pair-chip" aria-hidden="true"><span class="pair-chip__dot"></span>Paired</span>
+      </div>
+
+      <!-- the session on your iPhone — a partial device (bottom dissolves):
+           the real blocking screen, so the block is shown, not implied -->
+      <div class="pair-phone" aria-hidden="true">
+        <img class="pair-phone__img" src="img/pair-phone-mockup.webp" width="900" height="1773" alt="" loading="lazy">
+      </div>
+
+      </div><!-- /.mockup-combo -->
+    </div><!-- /.block__mockup-wrap -->
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SECTION 3 — MODES  (black)
+════════════════════════════════════════ -->
+<section class="s s--blk modes" id="modes" style="--from:#141414;--to:#141414">
+  <div class="page-grid modes__grid">
+    <header class="modes__head">
+      <p class="kicker r-up">HABITS</p>
+      <h2 class="hed r-scroll" data-scroll-reveal>The right mode for<br><span class="lime voice">every part of your day.</span></h2>
+    </header>
+
+    <!-- Ambient mosaic — upper strip, above the pills -->
+    <div class="modes__mosaic modes__mosaic--top" data-mosaic="top" aria-hidden="true">
+      <div class="modes__mg">
+        <figure class="mc" data-cat="l"><img src="img/modes/parent-time.jpg"     alt="" loading="lazy"><figcaption>Parent Time</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/offline-evening.jpg" alt="" loading="lazy"><figcaption>Offline Evening</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/recovery-walk.jpg"   alt="" loading="lazy"><figcaption>Recovery Walk</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/move.jpg"            alt="" loading="lazy"><figcaption>Move Break</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/sleep-gate.jpg"      alt="" loading="lazy"><figcaption>Sleep Gate</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/no-scroll.jpg"       alt="" loading="lazy"><figcaption>No Scroll</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/dinner.jpg"          alt="" loading="lazy"><figcaption>Dinner Mode</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/stretch.jpg"         alt="" loading="lazy"><figcaption>Stretch</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/quiet-mind.jpg"      alt="" loading="lazy"><figcaption>Quiet Mind</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/admin-hour.jpg"      alt="" loading="lazy"><figcaption>Admin Hour</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/commute-calm.jpg"    alt="" loading="lazy"><figcaption>Commute Calm</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/outdoor-time.jpg"    alt="" loading="lazy"><figcaption>Outdoor Time</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/wind.jpg"            alt="" loading="lazy"><figcaption>Wind Down</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/creative-flow.jpg"   alt="" loading="lazy"><figcaption>Creative Flow</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/weekend-reset.jpg"   alt="" loading="lazy"><figcaption>Weekend Reset</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/training.jpg"        alt="" loading="lazy"><figcaption>Training</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/recovery.jpg"        alt="" loading="lazy"><figcaption>Recovery</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/quick.jpg"           alt="" loading="lazy"><figcaption>Quick Focus</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/morning-start.jpg"   alt="" loading="lazy"><figcaption>Morning Start</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/walk.jpg"            alt="" loading="lazy"><figcaption>Walk</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/reset.jpg"           alt="" loading="lazy"><figcaption>Reset</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/work-sprint.jpg"     alt="" loading="lazy"><figcaption>Work Sprint</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/date-night.jpg"      alt="" loading="lazy"><figcaption>Date Night</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/run.jpg"             alt="" loading="lazy"><figcaption>Run</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/breathe.jpg"         alt="" loading="lazy"><figcaption>Breathe First</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/study.jpg"           alt="" loading="lazy"><figcaption>Study Mode</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/family.jpg"          alt="" loading="lazy"><figcaption>Family Time</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/mindful.jpg"         alt="" loading="lazy"><figcaption>Mindful</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/gym.jpg"             alt="" loading="lazy"><figcaption>Gym Mode</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/flow.jpg"            alt="" loading="lazy"><figcaption>Flow State</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/deepwork.jpg"        alt="" loading="lazy"><figcaption>Deep Work</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="modes__list">
+      <article class="mode" data-mode>
+        <h3 class="mode__title">Productivity</h3>
+        <p class="mode__desc">For the hours that need your full attention.</p>
+        <span class="mode__sub">Turn scattered work time into protected focus habits. Stay present longer, and make meaningful progress without constant distraction.</span>
+      </article>
+      <article class="mode" data-mode>
+        <h3 class="mode__title">Wellbeing</h3>
+        <p class="mode__desc">For the hours that help you reset.</p>
+        <span class="mode__sub">Not every focused hour is about output. Wellbeing Habit Modes help you pause, breathe, recover mentally, and build calmer rituals before moving forward.</span>
+      </article>
+      <article class="mode" data-mode>
+        <h3 class="mode__title">Body</h3>
+        <p class="mode__desc">For the hours that bring you back into motion.</p>
+        <span class="mode__sub">Made for workouts, walks, stretching, recovery, and physical routines. Body Habit Modes help you stay away from distractions while you train, move, or recharge.</span>
+      </article>
+      <article class="mode" data-mode>
+        <h3 class="mode__title">Life</h3>
+        <p class="mode__desc">For the hours that matter beyond the screen.</p>
+        <span class="mode__sub">Life Habit Modes help you step away from digital noise and give your attention back to people, places, and moments that deserve it.</span>
+      </article>
+    </div>
+
+    <!-- Ambient mosaic — 31 real poster cards, scroll-synced, decorative only -->
+    <div class="modes__mosaic" aria-hidden="true">
+      <div class="modes__mg">
+        <figure class="mc" data-cat="p"><img src="img/modes/deepwork.jpg"        alt="" loading="lazy"><figcaption>Deep Work</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/flow.jpg"            alt="" loading="lazy"><figcaption>Flow State</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/gym.jpg"             alt="" loading="lazy"><figcaption>Gym Mode</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/mindful.jpg"         alt="" loading="lazy"><figcaption>Mindful</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/family.jpg"          alt="" loading="lazy"><figcaption>Family Time</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/study.jpg"           alt="" loading="lazy"><figcaption>Study Mode</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/breathe.jpg"         alt="" loading="lazy"><figcaption>Breathe First</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/run.jpg"             alt="" loading="lazy"><figcaption>Run</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/date-night.jpg"      alt="" loading="lazy"><figcaption>Date Night</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/work-sprint.jpg"     alt="" loading="lazy"><figcaption>Work Sprint</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/reset.jpg"           alt="" loading="lazy"><figcaption>Reset</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/walk.jpg"            alt="" loading="lazy"><figcaption>Walk</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/morning-start.jpg"   alt="" loading="lazy"><figcaption>Morning Start</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/quick.jpg"           alt="" loading="lazy"><figcaption>Quick Focus</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/recovery.jpg"        alt="" loading="lazy"><figcaption>Recovery</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/training.jpg"        alt="" loading="lazy"><figcaption>Training</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/weekend-reset.jpg"   alt="" loading="lazy"><figcaption>Weekend Reset</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/creative-flow.jpg"   alt="" loading="lazy"><figcaption>Creative Flow</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/wind.jpg"            alt="" loading="lazy"><figcaption>Wind Down</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/outdoor-time.jpg"    alt="" loading="lazy"><figcaption>Outdoor Time</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/commute-calm.jpg"    alt="" loading="lazy"><figcaption>Commute Calm</figcaption></figure>
+        <figure class="mc" data-cat="p"><img src="img/modes/admin-hour.jpg"      alt="" loading="lazy"><figcaption>Admin Hour</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/quiet-mind.jpg"      alt="" loading="lazy"><figcaption>Quiet Mind</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/stretch.jpg"         alt="" loading="lazy"><figcaption>Stretch</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/dinner.jpg"          alt="" loading="lazy"><figcaption>Dinner Mode</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/no-scroll.jpg"       alt="" loading="lazy"><figcaption>No Scroll</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/sleep-gate.jpg"      alt="" loading="lazy"><figcaption>Sleep Gate</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/move.jpg"            alt="" loading="lazy"><figcaption>Move Break</figcaption></figure>
+        <figure class="mc" data-cat="b"><img src="img/modes/recovery-walk.jpg"   alt="" loading="lazy"><figcaption>Recovery Walk</figcaption></figure>
+        <figure class="mc" data-cat="w"><img src="img/modes/offline-evening.jpg" alt="" loading="lazy"><figcaption>Offline Evening</figcaption></figure>
+        <figure class="mc" data-cat="l"><img src="img/modes/parent-time.jpg"     alt="" loading="lazy"><figcaption>Parent Time</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SECTION 4 — JOURNEY  (midnight)
+════════════════════════════════════════ -->
+<section class="s s--mid journey" id="journey" style="--from:#141414;--to:#141414">
+  <div class="journey__pin">
+    <div class="page-grid journey__header-grid">
+      <div class="journey__head">
+        <p class="kicker r-up">One identity</p>
+        <h2 class="hed r-scroll" data-scroll-reveal>Your <span class="lime voice">journey,</span> your<br><span class="lime voice">growth,</span> your <span class="lime voice">pattern.</span></h2>
+      </div>
+    </div>
+    <div id="journeyDeck" aria-label="Identity stage journey"></div>
+    <p class="journey__foot">A journey measured not in days, but in depth. Every session contributes to who you become · 22 stages, each one earned.</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SECTION 5 — AVAILABILITY  (black)
+════════════════════════════════════════ -->
+<section class="s s--blk get" id="get" style="--from:#141414;--to:#141414">
+  <div class="wrap get__inner">
+    <p class="kicker r-up" style="justify-content:center">Try Focus for free</p>
+    <!-- The real Focus app icon, redrawn live (not a bitmap): lime squircle +
+         near-black ring, matching the shipped icon's exact geometry — Circle
+         trim(0, 0.78) rotated -90°. Backlit by a blurred copy of the tile so the
+         glow is the icon's own shape and hue. Lands as the section enters, then
+         the ring completes its own sweep. -->
+    <div class="get__icon reveal" aria-hidden="true">
+      <span class="get__icon-glow"></span>
+      <svg class="get__icon-svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="get-icon-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#E8FF72"/>
+            <stop offset="1" stop-color="#BFFF47"/>
+          </linearGradient>
+        </defs>
+        <rect x="3" y="3" width="94" height="94" rx="21" fill="url(#get-icon-grad)"/>
+        <path class="get__icon-ring" d="M50 21 A29 29 0 1 1 21.51 44.57" fill="none" stroke="#15170D" stroke-width="7" stroke-linecap="round" pathLength="100"/>
+      </svg>
+    </div>
+    <h2 class="hed get__title reveal">Your best <span class="lime voice">hours</span><br>start here.</h2>
+    <p class="get__sub reveal">31 habit modes, the full identity journey, and the shield that holds · no account required.</p>
+    <div class="get__stores reveal-children">
+      <span class="store-btn store-btn--lime is-soon" aria-disabled="true">
+        <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+        <span class="store-btn__text"><span class="store-btn__sm">Coming soon</span><span class="store-btn__lg">App Store</span></span>
+      </span>
+      <span class="store-btn store-btn--ghost is-soon" aria-disabled="true">
+        <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.4v17.2c0 .86.95 1.38 1.68.92l.2-.15 9.2-9.13a.6.6 0 0 0 0-.86L6.88 2.25l-.2-.15A1.07 1.07 0 0 0 5 3.4z"/></svg>
+        <span class="store-btn__text"><span class="store-btn__sm">Coming soon</span><span class="store-btn__lg">Google Play</span></span>
+      </span>
+      <span class="store-btn store-btn--ghost is-soon" aria-disabled="true">
+        <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
+        <span class="store-btn__text"><span class="store-btn__sm">Coming soon</span><span class="store-btn__lg">Chrome</span></span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<footer class="s s--blk footer" style="--from:#141414;--to:#141414">
+  <div class="footer__inner">
+    <span class="footer__logo"><svg class="nav__mark" viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="#BFFF47" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="34.31 9.67" transform="rotate(-90 10 10)" filter="url(#nav-arc-glow)"/></svg>Focus</span>
+    <div class="footer__links">
+      <a href="https://ryzlo.net/focus/privacy-policy/">Privacy</a>
+      <a href="https://ryzlo.net/terms/">Terms</a>
+      <a href="https://ryzlo.net/faq/">FAQ</a>
+    </div>
+    <span class="footer__copy">© 2026 Focus · built for deep work</span>
+  </div>
+</footer>
+
+<!-- ════════════════════════════════════════
+     CONTACT — slide-in drawer (js/contact.js)
+     Opened by the "Get in touch" buttons (data-contact-open). Progressive
+     enhancement: those are real links to the GitHub issues page, so if JS
+     never loads the click still reaches a working contact channel; when JS
+     is present it intercepts and opens this panel instead.
+════════════════════════════════════════ -->
+<div class="contact" id="contact" hidden>
+  <div class="contact__scrim" data-contact-close></div>
+  <aside class="contact__panel" role="dialog" aria-modal="true" aria-labelledby="contactTitle" aria-describedby="contactIntro" data-lenis-prevent>
+    <div class="contact__head">
+      <p class="contact__eyebrow">Say hello</p>
+      <button class="contact__close" type="button" aria-label="Close contact panel" data-contact-close>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <h2 class="contact__title" id="contactTitle">Get in touch</h2>
+    <p class="contact__intro" id="contactIntro">Questions, feedback, or partnership ideas — send a note and it lands with the team directly.</p>
+
+    <form class="contact__form" novalidate>
+      <div class="contact__field">
+        <label for="contactName">Name</label>
+        <input id="contactName" name="name" type="text" autocomplete="name" placeholder="Your name" required>
+      </div>
+      <div class="contact__field">
+        <label for="contactEmail">Email</label>
+        <input id="contactEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+      </div>
+      <div class="contact__field">
+        <label for="contactMessage">Message</label>
+        <textarea id="contactMessage" name="message" rows="4" placeholder="What's on your mind?" required></textarea>
+      </div>
+      <!-- honeypot: real people never fill a hidden field; bots do -->
+      <input type="text" name="_honey" class="contact__honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="contact__send" type="submit">
+        <span class="contact__send-label">Send message</span>
+        <svg class="contact__send-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+      <p class="contact__error" role="alert" hidden></p>
+    </form>
+
+    <div class="contact__done" hidden>
+      <div class="contact__done-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h3 class="contact__done-title">Message sent</h3>
+      <p class="contact__done-text">Thanks for reaching out — we read every message and will get back to you soon.</p>
+      <button class="contact__done-close" type="button" data-contact-close>Close</button>
+    </div>
+  </aside>
+</div>
+
+<!-- Safety net — plain script, no ES-module dependency, so it runs even if the
+     gsap/lenis imports in js/main.js never resolve (esm.sh unreachable, a
+     network error, a thrown init error). Without this, a failed module graph
+     leaves the opaque preloader up forever with the whole page hidden behind
+     it. If nothing has dismissed the preloader within 6s, force the resting
+     (fully visible, non-animated) state everywhere the reveal systems would
+     otherwise have left content invisible. -->
+<script>
+  setTimeout(function () {
+    var pre = document.getElementById('preloader');
+    if (pre && !pre.classList.contains('is-done')) {
+      pre.classList.add('is-done');
+      var revealed = document.querySelectorAll('.reveal, .r-up, .reveal-children, .r-clip');
+      for (var i = 0; i < revealed.length; i++) revealed[i].classList.add('is-in');
+    }
+  }, 6000);
+</script>
+<script type="module" src="js/main.js"></script>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "ff9ff51dd23d4a3e99d68f90047a1049"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
 </html>
