@@ -10,6 +10,9 @@
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png"/>
+  <!-- The hero phones are the LCP element — fetch them ahead of the JS modules
+       they'd otherwise queue behind. -->
+  <link rel="preload" as="image" href="img/hero-phone-front.webp" fetchpriority="high"/>
   <link rel="canonical" href="https://ryzlo.net/"/>
 
   <meta property="og:type" content="website"/>
@@ -27,10 +30,13 @@
 
   <link rel="preconnect" href="https://api.fontshare.com" crossorigin/>
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin/>
-  <!-- GSAP/Lenis drive nearly every animation on the site — preconnect so the
-       modulepreload below doesn't wait on a fresh DNS+TLS handshake first. -->
-  <link rel="preconnect" href="https://esm.sh" crossorigin/>
-  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&f[]=clash-display@600&f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet"/>
+  <!-- Core faces (Satoshi + Clash Display) block render as before. The three
+       "voice" faces (Erode/Tanker/Gambetta) appear only far below the fold, so
+       they load async via the media-swap trick and stop competing with the
+       hero's critical path. display=swap already covered any late arrival. -->
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&f[]=clash-display@600&display=swap" rel="stylesheet"/>
+  <link href="https://api.fontshare.com/v2/css?f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+  <noscript><link href="https://api.fontshare.com/v2/css?f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet"/></noscript>
   <link rel="stylesheet" href="css/style.css"/>
   <!-- True no-JS fallback: the preloader and every scroll-reveal system depend
        on js/main.js (which itself depends on the gsap/lenis ES modules loading
@@ -45,18 +51,21 @@
     </style>
   </noscript>
 
+  <!-- Self-hosted (pinned esm.sh es2022 builds in js/vendor/): same origin as
+       the page, so no third-party DNS/TLS on the critical path and no esm.sh
+       outage can take the site down. -->
   <script type="importmap">
   {
     "imports": {
-      "gsap":               "https://esm.sh/gsap@3.12.5",
-      "gsap/ScrollTrigger": "https://esm.sh/gsap@3.12.5/ScrollTrigger",
-      "lenis":              "https://esm.sh/lenis@1.1.14"
+      "gsap":               "/js/vendor/gsap.mjs",
+      "gsap/ScrollTrigger": "/js/vendor/ScrollTrigger.mjs",
+      "lenis":              "/js/vendor/lenis.mjs"
     }
   }
   </script>
-  <link rel="modulepreload" href="https://esm.sh/gsap@3.12.5" crossorigin/>
-  <link rel="modulepreload" href="https://esm.sh/gsap@3.12.5/ScrollTrigger" crossorigin/>
-  <link rel="modulepreload" href="https://esm.sh/lenis@1.1.14" crossorigin/>
+  <link rel="modulepreload" href="/js/vendor/gsap.mjs"/>
+  <link rel="modulepreload" href="/js/vendor/ScrollTrigger.mjs"/>
+  <link rel="modulepreload" href="/js/vendor/lenis.mjs"/>
 </head>
 <body>
 
@@ -150,8 +159,8 @@
     </div>
     <div class="hero__devices" aria-hidden="true">
       <span class="hero__devices-glow"></span>
-      <img class="hero__phone hero__phone--back" src="img/hero-phone-back.webp" alt="" width="759" height="1500" decoding="async">
-      <img class="hero__phone hero__phone--front" src="img/hero-phone-front.webp" alt="" width="1013" height="1500" decoding="async">
+      <img class="hero__phone hero__phone--back" src="img/hero-phone-back.webp" alt="" width="759" height="1500" decoding="async" fetchpriority="high">
+      <img class="hero__phone hero__phone--front" src="img/hero-phone-front.webp" alt="" width="1013" height="1500" decoding="async" fetchpriority="high">
     </div>
   </div>
   <span class="hero__scrollcue" aria-hidden="true">scroll</span>

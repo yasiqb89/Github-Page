@@ -1,30 +1,7 @@
-// Hero aura — a flowing "liquid silk" gradient rendered on a WebGL canvas
-// behind the grid. A fractal-noise field is warped by itself (domain warping)
-// and drifts over time, then mapped through the brand palette. Rendered at a
-// fraction of native resolution (soft + cheap) and CSS screen-blended, so only
-// its light adds over the dark hero. This is the expensive-feeling part: the
-// organic motion comes from the warp, not from moving rigid shapes.
-export function initHeroGradient(canvas) {
-  if (!canvas) return null;
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // Skip the fullscreen shader on touch / low-memory devices — it's a subtle
-  // ambient effect, not worth the GPU/battery cost on phones or low-end devices.
-  const coarse = matchMedia('(hover: none), (pointer: coarse)').matches;
-  const lowMem = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory < 4;
-  if (coarse || lowMem) return null;
-
-  const gl = canvas.getContext('webgl', {
-    antialias: false, alpha: true, premultipliedAlpha: false, powerPreference: 'low-power',
-  });
-  if (!gl) return null;
-
-  const VERT = `
+function I(t){if(!t)return null;const m=matchMedia("(prefers-reduced-motion: reduce)").matches,F=matchMedia("(hover: none), (pointer: coarse)").matches,_=typeof navigator.deviceMemory=="number"&&navigator.deviceMemory<4;if(F||_)return null;const e=t.getContext("webgl",{antialias:!1,alpha:!0,premultipliedAlpha:!1,powerPreference:"low-power"});if(!e)return null;const R=`
     attribute vec2 p;
     void main(){ gl_Position = vec4(p, 0.0, 1.0); }
-  `;
-
-  const FRAG = `
+  `,S=`
     precision highp float;
     uniform vec2  u_res;
     uniform float u_time;
@@ -61,7 +38,7 @@ export function initHeroGradient(canvas) {
       vec2 p  = uv * vec2(u_res.x/u_res.y, 1.0) * 1.6;
       float t = u_time * 0.06;
 
-      // domain warp — warp the field by two more fbm fields, drifting in time
+      // domain warp \u2014 warp the field by two more fbm fields, drifting in time
       vec2 q = vec2(fbm(p + vec2(0.0, t*1.1)), fbm(p + vec2(5.2, -t)));
       vec2 r = vec2(fbm(p + 3.0*q + vec2(1.7,9.2) + t*0.6),
                     fbm(p + 3.0*q + vec2(8.3,2.8) - t*0.7));
@@ -70,7 +47,7 @@ export function initHeroGradient(canvas) {
       float field = clamp(f*0.55 + r.x*0.30 + q.y*0.15, 0.0, 1.0);
       vec3 col = ramp(field);
 
-      // glowing filaments — bright ridges, dark valleys
+      // glowing filaments \u2014 bright ridges, dark valleys
       float lum = smoothstep(0.18, 0.95, f) * 0.9 + 0.1;
       col *= lum;
 
@@ -83,97 +60,4 @@ export function initHeroGradient(canvas) {
 
       gl_FragColor = vec4(max(col, 0.0), 1.0);
     }
-  `;
-
-  function compile(type, src) {
-    const s = gl.createShader(type);
-    gl.shaderSource(s, src);
-    gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-      console.warn('hero aura shader:', gl.getShaderInfoLog(s));
-      return null;
-    }
-    return s;
-  }
-
-  const vs = compile(gl.VERTEX_SHADER, VERT);
-  const fs = compile(gl.FRAGMENT_SHADER, FRAG);
-  if (!vs || !fs) return null;
-  const prog = gl.createProgram();
-  gl.attachShader(prog, vs);
-  gl.attachShader(prog, fs);
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    console.warn('hero aura link:', gl.getProgramInfoLog(prog));
-    return null;
-  }
-  gl.useProgram(prog);
-
-  const buf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-  const loc = gl.getAttribLocation(prog, 'p');
-  gl.enableVertexAttribArray(loc);
-  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-
-  const uRes = gl.getUniformLocation(prog, 'u_res');
-  const uTime = gl.getUniformLocation(prog, 'u_time');
-
-  // Render as a fraction of DEVICE pixels, not CSS pixels. The old version
-  // scaled CSS px and ignored DPR, so on a 2x display the backing ended up
-  // ~1/3.6 of the shown size — and the per-fragment anti-band dither, sampled
-  // once per backing pixel, got magnified into visible coarse grain on the
-  // upscale. Targeting a fraction of device px keeps the aura soft but caps the
-  // upscale near ~1.5-1.8x, so the dither reads as fine noise again. Still
-  // cheap: a 3-octave fbm at 30fps, gated to when the hero is on screen.
-  const SCALE = 0.7;                  // fraction of device resolution — soft, not blocky
-  const BUDGET = 1600;                // max backing long-edge, in device px
-  function resize() {
-    const r = canvas.getBoundingClientRect();
-    const dpr = Math.min(devicePixelRatio || 1, 2);
-    const devW = r.width * dpr, devH = r.height * dpr;
-    const s = Math.min(SCALE, BUDGET / Math.max(devW, devH, 1));
-    const w = Math.max(2, Math.round(devW * s));
-    const h = Math.max(2, Math.round(devH * s));
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniform2f(uRes, canvas.width, canvas.height);
-  }
-  resize();
-  addEventListener('resize', resize, { passive: true });
-
-  const start = performance.now();
-  const FRAME_MS = 1000 / 30;         // ambient drift — 30fps is plenty, halves GPU
-  let raf = null, running = false, lastDraw = 0;
-  function frame(now) {
-    raf = running ? requestAnimationFrame(frame) : null;
-    if (now - lastDraw < FRAME_MS) return;
-    lastDraw = now;
-    gl.uniform1f(uTime, (now - start) / 1000);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-  }
-  function play() { if (running || reduced) return; running = true; raf = requestAnimationFrame(frame); }
-  function pause() { running = false; if (raf) cancelAnimationFrame(raf); raf = null; }
-
-  // always paint one frame (covers reduced-motion + first paint before play)
-  gl.uniform1f(uTime, 0);
-  gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-  // only animate while the hero is on screen
-  let io = null;
-  if (!reduced) {
-    io = new IntersectionObserver(
-      (entries) => { entries[0].isIntersecting ? play() : pause(); },
-      { threshold: 0 }
-    );
-    io.observe(canvas);
-  }
-
-  return {
-    dispose() {
-      pause();
-      if (io) io.disconnect();
-      removeEventListener('resize', resize);
-    },
-  };
-}
+  `;function f(r,l){const i=e.createShader(r);return e.shaderSource(i,l),e.compileShader(i),e.getShaderParameter(i,e.COMPILE_STATUS)?i:(console.warn("hero aura shader:",e.getShaderInfoLog(i)),null)}const h=f(e.VERTEX_SHADER,R),u=f(e.FRAGMENT_SHADER,S);if(!h||!u)return null;const o=e.createProgram();if(e.attachShader(o,h),e.attachShader(o,u),e.linkProgram(o),!e.getProgramParameter(o,e.LINK_STATUS))return console.warn("hero aura link:",e.getProgramInfoLog(o)),null;e.useProgram(o);const E=e.createBuffer();e.bindBuffer(e.ARRAY_BUFFER,E),e.bufferData(e.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),e.STATIC_DRAW);const p=e.getAttribLocation(o,"p");e.enableVertexAttribArray(p),e.vertexAttribPointer(p,2,e.FLOAT,!1,0,0);const M=e.getUniformLocation(o,"u_res"),d=e.getUniformLocation(o,"u_time"),T=.7,L=1600;function s(){const r=t.getBoundingClientRect(),l=Math.min(devicePixelRatio||1,2),i=r.width*l,A=r.height*l,b=Math.min(T,L/Math.max(i,A,1)),w=Math.max(2,Math.round(i*b)),y=Math.max(2,Math.round(A*b));(t.width!==w||t.height!==y)&&(t.width=w,t.height=y),e.viewport(0,0,t.width,t.height),e.uniform2f(M,t.width,t.height)}s(),addEventListener("resize",s,{passive:!0});const P=performance.now(),B=1e3/30;let n=null,a=!1,g=0;function v(r){n=a?requestAnimationFrame(v):null,!(r-g<B)&&(g=r,e.uniform1f(d,(r-P)/1e3),e.drawArrays(e.TRIANGLES,0,3))}function C(){a||m||(a=!0,n=requestAnimationFrame(v))}function x(){a=!1,n&&cancelAnimationFrame(n),n=null}e.uniform1f(d,0),e.drawArrays(e.TRIANGLES,0,3);let c=null;return m||(c=new IntersectionObserver(r=>{r[0].isIntersecting?C():x()},{threshold:0}),c.observe(t)),{dispose(){x(),c&&c.disconnect(),removeEventListener("resize",s)}}}export{I as initHeroGradient};
