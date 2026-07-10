@@ -38,7 +38,7 @@ export function runPreloader() {
     });
 
     // ── brand word lands, gradient-filled ──
-    tl.call(() => { word.textContent = 'Focus'; word.classList.add('is-brand'); });
+    tl.call(() => { word.textContent = 'Ryzlo'; word.classList.add('is-brand'); });
     tl.fromTo(word, { opacity: 0, scale: 1.08, filter: 'blur(7px)' },
       { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 0.32, ease: 'power3.out' });
     tl.to({}, { duration: 0.20 });                 // hold
