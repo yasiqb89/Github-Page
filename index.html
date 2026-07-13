@@ -227,7 +227,7 @@
 
     <header class="numbers__header">
       <p class="kicker r-up">The cost</p>
-      <h2 class="numbers__hed r-scroll" data-scroll-reveal>
+      <h2 class="numbers__hed r-scroll" data-scroll-reveal data-sr-end="top 45%">
         On average, <span class="lime" data-days-lost>106</span> days a year<br>go to the <span class="lime voice">scroll.</span>
       </h2>
     </header>
@@ -297,7 +297,7 @@
       <p class="kicker r-up" style="justify-content:center">Meet Ryzlo</p>
       <h2 class="hed r-scroll turn__head" data-scroll-reveal data-sr-ink="var(--paper-ink)">Your day, spent the way<br>you <span class="lime voice">meant to</span>.</h2>
       <div class="turn__media" aria-hidden="true">
-        <img src="img/turn-phone-float.webp" width="1115" height="1720" loading="lazy" alt="">
+        <img src="img/meetryzlo.webp" width="1115" height="1720" loading="lazy" alt="">
         <div class="turn__bloom" aria-hidden="true"></div>
       </div>
     </div>
@@ -839,6 +839,84 @@
       </div>
     </div>
 
+    <!-- ▸ Dimensions (icon data-i 15) — the app's Self ▸ Dimensions tab, rebuilt.
+         Five growth dimensions on the app's slate→lime position-colour scale
+         (low = muted slate, high = lime); rows left, the pentagon radar map
+         right. Scores + geometry are the app's own DimensionRadarView sample. -->
+    <div class="af__exhibit af__exhibit--l" data-for="15" style="--lac:#2DD4BF">
+      <div class="afx-card afx-dimtab">
+        <div class="afx-card__head"><span>Your five dimensions</span></div>
+        <div class="afx-dimrow">
+          <div class="afx-dimrow__top"><span class="afx-dimrow__name">Awareness</span><em class="afx-dimrow__score" style="color:rgb(175,230,83)">82</em></div>
+          <div class="afx-dim__track"><b style="width:82%;background:linear-gradient(90deg,rgba(175,230,83,.5),rgb(175,230,83))"></b></div>
+          <div class="afx-dimrow__cap">Completion follow-through · Last 28 days</div>
+        </div>
+        <div class="afx-dimrow">
+          <div class="afx-dimrow__top"><span class="afx-dimrow__name">Action</span><em class="afx-dimrow__score" style="color:rgb(143,182,106)">47</em></div>
+          <div class="afx-dim__track"><b style="width:47%;background:linear-gradient(90deg,rgba(143,182,106,.5),rgb(143,182,106))"></b></div>
+          <div class="afx-dimrow__cap">Sessions started · Last 28 days</div>
+        </div>
+        <div class="afx-dimrow">
+          <div class="afx-dimrow__top"><span class="afx-dimrow__name">Resilience</span><em class="afx-dimrow__score" style="color:rgb(183,243,77)">91</em></div>
+          <div class="afx-dim__track"><b style="width:91%;background:linear-gradient(90deg,rgba(183,243,77,.5),rgb(183,243,77))"></b></div>
+          <div class="afx-dimrow__cap">Returning after misses · Last 14 days</div>
+        </div>
+        <div class="afx-dimrow">
+          <div class="afx-dimrow__top"><span class="afx-dimrow__name">Depth</span><em class="afx-dimrow__score" style="color:rgb(120,147,123)">22</em></div>
+          <div class="afx-dim__track"><b style="width:22%;background:linear-gradient(90deg,rgba(120,147,123,.5),rgb(120,147,123))"></b></div>
+          <div class="afx-dimrow__cap">Session length · Last 10 sessions</div>
+        </div>
+        <div class="afx-dimrow">
+          <div class="afx-dimrow__top"><span class="afx-dimrow__name">Alignment</span><em class="afx-dimrow__score" style="color:rgb(157,204,96)">63</em></div>
+          <div class="afx-dim__track"><b style="width:63%;background:linear-gradient(90deg,rgba(157,204,96,.5),rgb(157,204,96))"></b></div>
+          <div class="afx-dimrow__cap">Weekly spread · Last 7 days</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="af__exhibit af__exhibit--r" data-for="15" style="--lac:#2DD4BF">
+      <div class="afx-card">
+        <div class="afx-card__head"><span>Dimensions map</span></div>
+        <svg class="afx-radar" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="dseg0" gradientUnits="userSpaceOnUse" x1="120.0" y1="66.4" x2="155.5" y2="108.5"><stop offset="0" stop-color="rgb(175,230,83)"/><stop offset="1" stop-color="rgb(143,182,106)"/></linearGradient>
+            <linearGradient id="dseg1" gradientUnits="userSpaceOnUse" x1="155.5" y1="108.5" x2="154.0" y2="166.8"><stop offset="0" stop-color="rgb(143,182,106)"/><stop offset="1" stop-color="rgb(183,243,77)"/></linearGradient>
+            <linearGradient id="dseg2" gradientUnits="userSpaceOnUse" x1="154.0" y1="166.8" x2="104.9" y2="140.8"><stop offset="0" stop-color="rgb(183,243,77)"/><stop offset="1" stop-color="rgb(120,147,123)"/></linearGradient>
+            <linearGradient id="dseg3" gradientUnits="userSpaceOnUse" x1="104.9" y1="140.8" x2="77.4" y2="106.2"><stop offset="0" stop-color="rgb(120,147,123)"/><stop offset="1" stop-color="rgb(157,204,96)"/></linearGradient>
+            <linearGradient id="dseg4" gradientUnits="userSpaceOnUse" x1="77.4" y1="106.2" x2="120.0" y2="66.4"><stop offset="0" stop-color="rgb(157,204,96)"/><stop offset="1" stop-color="rgb(175,230,83)"/></linearGradient>
+          </defs>
+          <!-- grid: 4 concentric pentagons + spokes -->
+          <polygon points="120.0,104.5 134.7,115.2 129.1,132.5 110.9,132.5 105.3,115.2" stroke="rgba(255,255,255,.08)" stroke-width="0.75"/>
+          <polygon points="120.0,89.0 149.5,110.4 138.2,145.1 101.8,145.1 90.5,110.4" stroke="rgba(255,255,255,.08)" stroke-width="0.75"/>
+          <polygon points="120.0,73.5 164.2,105.6 147.3,157.6 92.7,157.6 75.8,105.6" stroke="rgba(255,255,255,.08)" stroke-width="0.75"/>
+          <polygon points="120.0,58.0 179.0,100.8 156.4,170.2 83.6,170.2 61.0,100.8" stroke="rgba(255,255,255,.08)" stroke-width="0.75"/>
+          <line x1="120" y1="120" x2="120.0" y2="58.0" stroke="rgba(255,255,255,.05)" stroke-width="0.65"/>
+          <line x1="120" y1="120" x2="179.0" y2="100.8" stroke="rgba(255,255,255,.05)" stroke-width="0.65"/>
+          <line x1="120" y1="120" x2="156.4" y2="170.2" stroke="rgba(255,255,255,.05)" stroke-width="0.65"/>
+          <line x1="120" y1="120" x2="83.6" y2="170.2" stroke="rgba(255,255,255,.05)" stroke-width="0.65"/>
+          <line x1="120" y1="120" x2="61.0" y2="100.8" stroke="rgba(255,255,255,.05)" stroke-width="0.65"/>
+          <!-- data polygon + per-edge score-coloured stroke -->
+          <polygon points="120.0,66.4 155.5,108.5 154.0,166.8 104.9,140.8 77.4,106.2" fill="rgba(255,255,255,.05)"/>
+          <line x1="120.0" y1="66.4" x2="155.5" y2="108.5" stroke="url(#dseg0)" stroke-width="2.25" stroke-linecap="round"/>
+          <line x1="155.5" y1="108.5" x2="154.0" y2="166.8" stroke="url(#dseg1)" stroke-width="2.25" stroke-linecap="round"/>
+          <line x1="154.0" y1="166.8" x2="104.9" y2="140.8" stroke="url(#dseg2)" stroke-width="2.25" stroke-linecap="round"/>
+          <line x1="104.9" y1="140.8" x2="77.4" y2="106.2" stroke="url(#dseg3)" stroke-width="2.25" stroke-linecap="round"/>
+          <line x1="77.4" y1="106.2" x2="120.0" y2="66.4" stroke="url(#dseg4)" stroke-width="2.25" stroke-linecap="round"/>
+          <!-- vertex labels: name + score (score in its position colour) -->
+          <text x="120.0" y="35.9" text-anchor="middle" class="afx-radar__lbl">AWARENESS</text>
+          <text x="120.0" y="47.9" text-anchor="middle" class="afx-radar__val" fill="rgb(175,230,83)">82</text>
+          <text x="199.0" y="93.3" text-anchor="middle" class="afx-radar__lbl">ACTION</text>
+          <text x="199.0" y="105.3" text-anchor="middle" class="afx-radar__val" fill="rgb(143,182,106)">47</text>
+          <text x="168.8" y="186.2" text-anchor="middle" class="afx-radar__lbl">RESILIENCE</text>
+          <text x="168.8" y="198.2" text-anchor="middle" class="afx-radar__val" fill="rgb(183,243,77)">91</text>
+          <text x="71.2" y="186.2" text-anchor="middle" class="afx-radar__lbl">DEPTH</text>
+          <text x="71.2" y="198.2" text-anchor="middle" class="afx-radar__val" fill="rgb(120,147,123)">22</text>
+          <text x="41.0" y="93.3" text-anchor="middle" class="afx-radar__lbl">ALIGNMENT</text>
+          <text x="41.0" y="105.3" text-anchor="middle" class="afx-radar__val" fill="rgb(157,204,96)">63</text>
+        </svg>
+      </div>
+    </div>
+
   </div>
 
   <div class="af__stage">
@@ -897,6 +975,9 @@
       </button>
       <button class="af__icon" role="tab" aria-selected="false" data-i="14" style="--ac:#6EE7B7" aria-label="Browser pairing">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18" stroke-linecap="round"/><path d="M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18"/></svg>
+      </button>
+      <button class="af__icon" role="tab" aria-selected="false" data-i="15" style="--ac:#2DD4BF" aria-label="Dimensions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8.5 6.2-3.25 10H6.75L3.5 9.2z"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
       </button>
     </div>
     <p class="af__line">Hover any tool to see how it keeps you focused.</p>
