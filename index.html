@@ -1083,6 +1083,39 @@
         <span class="store-btn__text"><span class="store-btn__sm">Coming soon</span><span class="store-btn__lg">Chrome</span></span>
       </span>
     </div>
+
+    <!-- Waitlist — the working reach-out beneath the "coming soon" badges.
+         A real <form> that POSTs field_0 (email) to the EmailOctopus endpoint,
+         targeting the hidden iframe below so the page never navigates away;
+         js/waitlist.js validates, shows a sending state, then swaps in the
+         inline success view. No third-party script loads (reCAPTCHA is off on
+         the form). If JS never runs, the native post to the iframe still
+         records the signup — the enhancement is purely the inline success. -->
+    <div class="waitlist reveal" id="waitlist">
+      <p class="waitlist__note">Not out yet. Leave your email and we'll tell you the moment it lands — that's the only reason we'll write.</p>
+      <form class="waitlist__form" action="https://eocampaign1.com/form/8ace57de-7edb-11f1-b586-310063760f3d" method="post" target="waitlist-sink" novalidate>
+        <label class="sr-only" for="waitlistEmail">Email address</label>
+        <div class="waitlist__row">
+          <input class="waitlist__input" id="waitlistEmail" name="field_0" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+          <!-- EmailOctopus honeypot: keep this exact name, always empty -->
+          <input class="waitlist__honey" type="text" name="hpc4b27b6e-eb38-11e9-be00-06b4694bee2a" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button class="waitlist__btn" type="submit">
+            <span class="waitlist__btn-label">Notify me</span>
+            <svg class="waitlist__btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+        </div>
+        <p class="waitlist__error" role="alert" hidden></p>
+      </form>
+      <div class="waitlist__done" hidden>
+        <span class="waitlist__done-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </span>
+        <p class="waitlist__done-text">You're on the list — we'll email you the moment Ryzlo launches.</p>
+      </div>
+    </div>
+    <!-- hidden submit sink: the cross-origin POST lands here so the page itself
+         never navigates; waitlist.js treats its load as the success signal -->
+    <iframe name="waitlist-sink" class="waitlist__sink" title="waitlist submission" tabindex="-1" aria-hidden="true"></iframe>
   </div>
 </section>
 
