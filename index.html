@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ryzlo — Take back your time</title>
+  <title>Ryzlo · Take back your time</title>
   <meta name="description" content="Session-based focus with ScreenTime blocking, 31 habit modes, and an identity that grows every time you show up."/>
   <meta name="theme-color" content="#141414"/>
   <meta name="color-scheme" content="dark"/>
@@ -17,26 +17,25 @@
 
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="Ryzlo"/>
-  <meta property="og:title" content="Ryzlo — Take back your time"/>
+  <meta property="og:title" content="Ryzlo · Take back your time"/>
   <meta property="og:description" content="Session-based focus with ScreenTime blocking, 31 habit modes, and an identity that grows every time you show up."/>
   <meta property="og:url" content="https://ryzlo.net/"/>
   <meta property="og:image" content="https://ryzlo.net/img/og-image.png"/>
   <meta property="og:image:width" content="1200"/>
   <meta property="og:image:height" content="630"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="Ryzlo — Take back your time"/>
+  <meta name="twitter:title" content="Ryzlo · Take back your time"/>
   <meta name="twitter:description" content="Session-based focus with ScreenTime blocking, 31 habit modes, and an identity that grows every time you show up."/>
   <meta name="twitter:image" content="https://ryzlo.net/img/og-image.png"/>
 
-  <link rel="preconnect" href="https://api.fontshare.com" crossorigin/>
-  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin/>
-  <!-- Core faces (Satoshi + Clash Display) block render as before. The three
-       "voice" faces (Erode/Tanker/Gambetta) appear only far below the fold, so
-       they load async via the media-swap trick and stop competing with the
-       hero's critical path. display=swap already covered any late arrival. -->
-  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800&f[]=clash-display@600&display=swap" rel="stylesheet"/>
-  <link href="https://api.fontshare.com/v2/css?f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
-  <noscript><link href="https://api.fontshare.com/v2/css?f[]=erode@400&f[]=tanker@400&f[]=gambetta@501,701&display=swap" rel="stylesheet"/></noscript>
+  <!-- Fonts are self-hosted in /fonts and declared at the top of css/style.css —
+       no third-party font CDN, so no visitor IP leaves this origin. The old
+       async media-swap trick for the below-the-fold "voice" faces is no longer
+       needed: a browser only downloads an @font-face file when rendered text
+       actually uses it, so Erode/Tanker/Gambetta stay off the hero's critical
+       path on their own. Preload just the two faces the first screen paints. -->
+  <link rel="preload" href="fonts/satoshi-400.woff2" as="font" type="font/woff2" crossorigin/>
+  <link rel="preload" href="fonts/satoshi-700.woff2" as="font" type="font/woff2" crossorigin/>
   <link rel="stylesheet" href="css/style.css"/>
   <!-- True no-JS fallback: the preloader and every scroll-reveal system depend
        on js/main.js (which itself depends on the gsap/lenis ES modules loading
@@ -134,7 +133,6 @@
   </div>
   <div class="hero__layout page-grid">
     <div class="hero__inner">
-      <p class="hero__eyebrow reveal"><span class="dot"></span>Ryzlo · iOS 17+</p>
       <h1 class="hero__title">
         <span class="h-line-wrap"><span class="h-line">Take back</span></span>
         <span class="h-line-wrap"><span class="h-line">your <span class="lime voice">time</span>.</span></span>
@@ -145,14 +143,14 @@
            scrolling the visitor past the whole page (js/waitlist.js →
            initHeroWaitlist). Esc / ✕ / a click outside restores the badges. -->
       <div class="hero__cta reveal">
-        <a class="store-btn store-btn--lime magnetic" data-magnet="0.22" href="#get" data-wl-open aria-expanded="false" aria-controls="heroWl" aria-label="Coming soon to the App Store — join the waitlist">
+        <a class="store-btn store-btn--lime magnetic" data-magnet="0.22" href="#get" data-wl-open aria-expanded="false" aria-controls="heroWl" aria-label="Coming soon to the App Store, join the waitlist">
           <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
           <span class="store-btn__text">
             <span class="store-btn__sm">Coming soon to the</span>
             <span class="store-btn__lg">App Store</span>
           </span>
         </a>
-        <a class="store-btn store-btn--ghost magnetic" data-magnet="0.22" href="#get" data-wl-open aria-expanded="false" aria-controls="heroWl" aria-label="Coming soon to Chrome — join the waitlist">
+        <a class="store-btn store-btn--ghost magnetic" data-magnet="0.22" href="#get" data-wl-open aria-expanded="false" aria-controls="heroWl" aria-label="Coming soon to Chrome, join the waitlist">
           <svg class="store-btn__glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C8.21 0 4.831 1.757 2.632 4.501l3.953 6.848A5.454 5.454 0 0 1 12 6.545h10.691A12 12 0 0 0 12 0zM1.931 5.47A11.943 11.943 0 0 0 0 12c0 6.012 4.42 10.991 10.189 11.864l3.953-6.847a5.45 5.45 0 0 1-6.865-2.29zm13.342 2.166a5.446 5.446 0 0 1 1.45 7.09l.002.001h-.002l-5.344 9.257c.206.01.413.016.621.016 6.627 0 12-5.373 12-12 0-1.54-.29-3.011-.818-4.364zM12 16.364a4.364 4.364 0 1 1 0-8.728 4.364 4.364 0 0 1 0 8.728Z"/></svg>
           <span class="store-btn__text">
             <span class="store-btn__sm">Coming soon to</span>
@@ -181,12 +179,13 @@
               </button>
             </div>
             <p class="waitlist__error" role="alert" hidden></p>
+            <p class="waitlist__legal">Launch news only. Unsubscribe anytime. <a href="privacy.html">Privacy notice</a>.</p>
           </form>
           <div class="waitlist__done hero-wl__done" role="status" hidden>
             <span class="waitlist__done-mark" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
             </span>
-            <p class="waitlist__done-text">You're on the list — we'll email you the moment Ryzlo launches.</p>
+            <p class="waitlist__done-text">You're on the list. We'll email you the moment Ryzlo launches.</p>
           </div>
         </div>
       </div>
@@ -228,7 +227,7 @@
     <header class="numbers__header">
       <p class="kicker r-up">The cost</p>
       <h2 class="numbers__hed r-scroll" data-scroll-reveal data-sr-end="top 45%">
-        On average, <span class="lime" data-days-lost>106</span> days a year<br>go to the <span class="lime voice">scroll.</span>
+        <span data-days-lead>On average,</span> <span class="lime" data-days-lost>106</span> days a year<br>disappear into the <span class="lime voice">scroll.</span>
       </h2>
     </header>
 
@@ -627,7 +626,7 @@
           <svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--lac)"><path d="M12 2l8 3.4v5.6c0 5-3.4 8.6-8 9.9C7.4 19.6 4 16 4 11V5.4L12 2z"/></svg>
           <div>
             <div class="afx-sh__title">1 shield ready</div>
-            <div class="afx-sh__sub">Miss a day — it absorbs the break</div>
+            <div class="afx-sh__sub">Miss a day, it absorbs the break</div>
           </div>
         </div>
         <div class="afx-sh__divider"></div>
@@ -766,7 +765,7 @@
           <span class="afx-livepill__label">Deep Work</span>
           <span class="afx-livepill__time" style="color:var(--lac)">47:23</span>
         </div>
-        <div class="afx-live__copy">Live on your lock screen — always one look away.</div>
+        <div class="afx-live__copy">Live on your lock screen, always one look away.</div>
       </div>
     </div>
 
@@ -813,7 +812,7 @@
       <div class="afx-card">
         <div class="afx-card__head"><span>Browser paired</span><span class="afx-dot" style="background:var(--lac);box-shadow:0 0 9px var(--lac)"></span></div>
         <div class="afx-brow__badge">Chrome + Ryzlo</div>
-        <div class="afx-brow__copy">Your session rules now apply everywhere — including the web.</div>
+        <div class="afx-brow__copy">Your session rules now apply everywhere, including the web.</div>
         <div class="afx-row" style="margin-top:12px">
           <span class="afx-badge" style="color:var(--lac)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18" stroke-linecap="round"/><path d="M12 3c2.6 2.6 2.6 15.4 0 18"/></svg></span>
           <span class="afx-row__main"><span class="afx-row__title">Deep Work active</span><span class="afx-row__sub">Web also protected</span></span>
@@ -1000,7 +999,7 @@
       <div class="block__ledger reveal-children">
         <div class="block__row"><span class="block__num">01</span><span>Start a session on your phone</span></div>
         <div class="block__row"><span class="block__num">02</span><span>Pair in seconds with QR scan or code</span></div>
-        <div class="block__row"><span class="block__num">03</span><span>End it, and everything unlocks together</span></div>
+        <div class="block__row"><span class="block__num">03</span><span>End the session, and both unlock at once</span></div>
       </div>
     </div>
 
@@ -1010,14 +1009,14 @@
     <div class="block__mockup-wrap block__mockup reveal">
       <div class="mockup-combo">
       <!-- inside the combo so it shares the window's exact left edge -->
-      <p class="block__tag" aria-hidden="true">Live flow — Deep Work</p>
+      <p class="block__tag" aria-hidden="true">Live flow · Deep Work</p>
 
       <div class="block__window">
         <div class="safari-crop">
           <iframe class="safari-svg focus-flow-frame"
                   data-src="focus-flow.html"
                   scrolling="no"
-                  title="Ryzlo blocking a session — Deep Work mode">
+                  title="Ryzlo blocking a session, Deep Work mode">
           </iframe>
           <!-- one-shot keyline flash — pre-rendered lime glow, only opacity animates -->
           <div class="block__flash" aria-hidden="true"></div>
@@ -1207,7 +1206,7 @@
          the form). If JS never runs, the native post to the iframe still
          records the signup — the enhancement is purely the inline success. -->
     <div class="waitlist reveal" id="waitlist">
-      <p class="waitlist__note">Not out yet. Leave your email and we'll tell you the moment it lands — that's the only reason we'll write.</p>
+      <p class="waitlist__note">Not out yet. Leave your email and we'll tell you the moment it lands. That's the only reason we'll write.</p>
       <form class="waitlist__form" action="https://eocampaign1.com/form/8ace57de-7edb-11f1-b586-310063760f3d" method="post" target="waitlist-sink" novalidate>
         <label class="sr-only" for="waitlistEmail">Email address</label>
         <div class="waitlist__row">
@@ -1220,12 +1219,13 @@
           </button>
         </div>
         <p class="waitlist__error" role="alert" hidden></p>
+        <p class="waitlist__legal">We store your email with EmailOctopus and use it only to tell you when Ryzlo launches. Unsubscribe from any email. <a href="privacy.html">Privacy notice</a>.</p>
       </form>
       <div class="waitlist__done" hidden>
         <span class="waitlist__done-mark" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </span>
-        <p class="waitlist__done-text">You're on the list — we'll email you the moment Ryzlo launches.</p>
+        <p class="waitlist__done-text">You're on the list. We'll email you the moment Ryzlo launches.</p>
       </div>
     </div>
     <!-- hidden submit sink: the cross-origin POST lands here so the page itself
@@ -1238,7 +1238,9 @@
   <div class="footer__inner">
     <span class="footer__logo"><svg class="nav__mark" viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="#BFFF47" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="34.31 9.67" transform="rotate(-90 10 10)" filter="url(#nav-arc-glow)"/></svg>Ryzlo</span>
     <div class="footer__links">
-      <a href="https://ryzlo.net/focus/privacy-policy/">Privacy</a>
+      <!-- Website notice (this site's own data flows) vs the app's App Store
+           privacy URL, which must keep its /focus/privacy-policy/ path. -->
+      <a href="privacy.html">Privacy</a>
       <a href="https://ryzlo.net/terms/">Terms</a>
       <a href="https://ryzlo.net/faq/">FAQ</a>
     </div>
@@ -1263,7 +1265,7 @@
       </button>
     </div>
     <h2 class="contact__title" id="contactTitle">Get in touch</h2>
-    <p class="contact__intro" id="contactIntro">Questions, feedback, or partnership ideas — send a note and it lands with the team directly.</p>
+    <p class="contact__intro" id="contactIntro">Questions, feedback, or partnership ideas. Send a note and it lands with the team directly.</p>
 
     <form class="contact__form" novalidate>
       <div class="contact__field">
@@ -1285,6 +1287,12 @@
         <svg class="contact__send-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
       </button>
       <p class="contact__error" role="alert" hidden></p>
+      <!-- Consent, deliberately never pre-ticked: an unticked box that the user
+           chooses to tick is the whole point. Sits below the CTA as fine print. -->
+      <label class="contact__consent">
+        <input type="checkbox" name="consent" id="contactConsent" required>
+        <span>I agree that my name, email and message are sent via FormSubmit to Ryzlo, and used only to reply to me. <a href="privacy.html">Privacy notice</a>.</span>
+      </label>
     </form>
 
     <div class="contact__done" hidden>
@@ -1292,7 +1300,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
       </div>
       <h3 class="contact__done-title">Message sent</h3>
-      <p class="contact__done-text">Thanks for reaching out — we read every message and will get back to you soon.</p>
+      <p class="contact__done-text">Thanks for reaching out. We read every message and will get back to you soon.</p>
       <button class="contact__done-close" type="button" data-contact-close>Close</button>
     </div>
   </aside>
